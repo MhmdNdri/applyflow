@@ -271,13 +271,11 @@ This project already ignores:
 
 That means your API keys, Google OAuth JSON, token file, and local run data are excluded by default.
 
-If any secret was ever pasted into chat, copied into a tracked file, or pushed elsewhere, rotate it before publishing the repo.
+If any secret was ever copied into a tracked file or pushed elsewhere, rotate it before publishing the repo.
 
-## Can You Push This To GitHub?
+## Publishing
 
-Yes, with one check first.
-
-This folder is not currently a Git repo yet, so before pushing:
+Before pushing this project publicly:
 
 1. initialize Git
 2. confirm only safe files are tracked
@@ -287,7 +285,7 @@ This folder is not currently a Git repo yet, so before pushing:
 Suggested commands:
 
 ```bash
-cd /Users/mhmd_ndri/Desktop/apply
+cd /path/to/project
 git init
 git add .
 git status
@@ -336,7 +334,7 @@ The app already includes output sanitization and a repair pass, but if the issue
 
 For a full implementation report, architecture summary, setup history, and known limitations, see:
 
-- [PROJECT_DOCUMENTATION.md](/Users/mhmd_ndri/Desktop/apply/PROJECT_DOCUMENTATION.md)
+- [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md)
 
 ## Test Commands
 
