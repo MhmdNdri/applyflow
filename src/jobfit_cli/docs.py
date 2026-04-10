@@ -25,6 +25,7 @@ class GoogleDocsClient:
         *,
         oauth_client_file: Path | None = None,
         oauth_token_file: Path | None = None,
+        credentials: Any | None = None,
     ) -> None:
         self.auth_settings = GoogleAuthSettings(
             service_account_file=service_account_file,
@@ -32,6 +33,7 @@ class GoogleDocsClient:
             oauth_token_file=oauth_token_file,
         )
         self.folder_id = folder_id
+        self._credentials = credentials
         self._docs_service = None
         self._drive_service = None
 
@@ -40,10 +42,19 @@ class GoogleDocsClient:
         if self._docs_service is not None:
             return self._docs_service
 
-        credentials, build = load_google_dependencies(
-            auth_settings=self.auth_settings,
-            scopes=DOCS_SCOPES,
-        )
+        if self._credentials is not None:
+            credentials = self._credentials
+            try:
+                from googleapiclient.discovery import build
+            except ImportError as exc:  # pragma: no cover - depends on local environment
+                raise ConfigurationError(
+                    "Google API packages are not installed. Run `pip install -e .` first."
+                ) from exc
+        else:
+            credentials, build = load_google_dependencies(
+                auth_settings=self.auth_settings,
+                scopes=DOCS_SCOPES,
+            )
         self._docs_service = build("docs", "v1", credentials=credentials, cache_discovery=False)
         return self._docs_service
 
@@ -52,10 +63,19 @@ class GoogleDocsClient:
         if self._drive_service is not None:
             return self._drive_service
 
-        credentials, build = load_google_dependencies(
-            auth_settings=self.auth_settings,
-            scopes=DOCS_SCOPES,
-        )
+        if self._credentials is not None:
+            credentials = self._credentials
+            try:
+                from googleapiclient.discovery import build
+            except ImportError as exc:  # pragma: no cover - depends on local environment
+                raise ConfigurationError(
+                    "Google API packages are not installed. Run `pip install -e .` first."
+                ) from exc
+        else:
+            credentials, build = load_google_dependencies(
+                auth_settings=self.auth_settings,
+                scopes=DOCS_SCOPES,
+            )
         self._drive_service = build("drive", "v3", credentials=credentials, cache_discovery=False)
         return self._drive_service
 

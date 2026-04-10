@@ -1,18 +1,17 @@
-# Job Fit Evaluator CLI
+# Applyflow
 
-Job Fit Evaluator is a Python CLI for running an honest AI-assisted job application workflow from your terminal.
+Applyflow is a job-application workflow project with three active layers: a production Python CLI, a FastAPI backend, and a Bun-powered React frontend for the fullstack product.
 
-It lets you keep one local resume and one long-term context file, paste any job description, score your fit from `0-100`, generate a tailored cover letter, archive the full run locally, create a Google Doc for the letter, and log the result into Google Sheets.
+Today the web product is internal-workspace-first: store your profile in the app, create jobs, score them from `0-100`, generate concise cover letters, manage statuses, and keep letters and task history inside the product database. The CLI still exists for local-file workflows and legacy exports, but the browser product now treats the database as the source of truth.
 
 ## What It Does
 
 - scores a job description against your resume and context using the OpenAI Responses API
 - returns a strict fit score with concise feedback
 - generates a short, humanized cover letter
+- keeps a database-backed internal job tracker and cover-letter library in the web app
+- runs score and cover-letter tasks through background workers when Redis is configured
 - keeps local archives of job descriptions, letters, and run metadata
-- creates a Google Doc for each cover letter
-- appends a clean tracking row to Google Sheets
-- adds sheet formatting, score highlighting, and an application-status column
 
 ## Workflow
 
@@ -36,7 +35,7 @@ The project was built for a real application workflow where the goal is not just
 - honest fit evaluation, not flattery
 - reusable candidate context across many applications
 - one place to track jobs and statuses
-- less manual copy-paste between AI, Google Docs, and Sheets
+- less manual copy-paste between AI output and application tracking
 
 ## Project Structure
 
@@ -48,11 +47,41 @@ src/jobfit_cli/
   constants.py        Shared defaults and sheet schema constants
   docs.py             Google Docs and Drive integration
   google_auth.py      Google OAuth and service-account auth helpers
-  models.py           Typed fit-evaluation schema
-  openai_service.py   OpenAI scoring and cover-letter generation
-  prompts.py          Prompt builders and applicant-profile extraction
+  models.py           Compatibility exports for shared response models
+  openai_service.py   Compatibility exports for shared OpenAI services
+  prompts.py          Compatibility exports for shared prompt helpers
   sheets.py           Google Sheets logging, migration, and formatting
   storage.py          Local file persistence helpers
+
+src/jobfit_core/
+  models.py           Shared fit-evaluation schema
+  prompts.py          Shared prompt builders and applicant-profile extraction
+  openai_service.py   Shared OpenAI scoring and cover-letter generation
+  workflows.py        Reusable job scoring workflow service
+
+src/jobfit_api/
+  main.py             FastAPI app entrypoint
+  settings.py         API config and environment loading
+  database.py         SQLAlchemy engine and session management
+  models.py           Database models for the SaaS backend
+  auth.py             Clerk-ready token verification helpers
+  queue.py            Redis and Dramatiq broker setup
+  task_processing.py  Phase 4 task creation and execution
+  routes/             Health, auth, profile, jobs, and task API routes
+
+frontend/
+  package.json        Bun workspace for the React app
+  src/app/            App root, providers, and TanStack Router setup
+  src/pages/          Landing, dashboard, onboarding, jobs, detail, and settings pages
+  src/lib/api/        OpenAPI-derived frontend contract and API client
+  src/components/     Shared shell and UI primitives
+  openapi.json        Exported backend OpenAPI schema for client generation
+
+alembic/
+  env.py              Alembic migration environment
+  versions/           Database schema revisions
+
+docker-compose.yml    Local Postgres and Redis services for API work
 
 data/
   profile/            Reusable resume and context
@@ -65,12 +94,9 @@ data/
 ## Requirements
 
 - Python `3.14+`
+- Bun `1.3+`
 - an OpenAI API key
-- a Google account with:
-  - Google Sheets API enabled
-  - Google Docs API enabled
-  - Google Drive API enabled
-- a Google OAuth desktop client JSON for personal Gmail usage
+- for local API work: Docker or another Postgres/Redis setup
 
 ## Install
 
@@ -100,33 +126,9 @@ Set these values in `.env`:
 ```env
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-5.4-mini
-GOOGLE_SHEET_ID=your_google_sheet_id
-GOOGLE_OAUTH_CLIENT_FILE=credentials/google-oauth-client.json
-GOOGLE_OAUTH_TOKEN_FILE=data/google/oauth-token.json
-GOOGLE_DRIVE_FOLDER_ID=your_google_drive_folder_id
+FRONTEND_BASE_URL=http://127.0.0.1:5173
+LOG_LEVEL=INFO
 ```
-
-Optional fallback for Google Workspace or bot-style setups:
-
-```env
-GOOGLE_SERVICE_ACCOUNT_FILE=credentials/google-service-account.json
-```
-
-### Recommended Google Setup For Personal Gmail
-
-For a personal Google Drive account, use OAuth.
-
-1. Create or select a Google Cloud project.
-2. Enable:
-   - Google Sheets API
-   - Google Docs API
-   - Google Drive API
-3. Create an OAuth client of type `Desktop app`.
-4. Download the JSON and place it in:
-   - `credentials/google-oauth-client.json`
-5. Create a folder in Google Drive for generated cover letters.
-6. Copy that folder ID into `GOOGLE_DRIVE_FOLDER_ID`.
-7. If the OAuth app is still in testing mode, add your Gmail as a test user.
 
 ## First-Time Setup
 
@@ -149,6 +151,164 @@ Then fill in:
 
 - `data/profile/resume.md`
 - `data/profile/context.md`
+
+## Backend API
+
+The repo now includes Phases 1 through 4 of the fullstack backend plan:
+
+- FastAPI app with `/` and `/api/v1/health`
+- Clerk-ready bearer token verification hooks
+- SQLAlchemy models for users, profiles, jobs, evaluations, cover letters, and background tasks
+- Alembic migrations
+- Redis and Dramatiq-backed task dispatch for out-of-process workers
+- task retry metadata, manual retry support, and request-id based observability
+- shared-core powered scoring and cover-letter generation from API task endpoints
+
+The current API surface also includes the first real product routes:
+
+- `GET /api/v1/profile`
+- `POST /api/v1/profile`
+- `PATCH /api/v1/profile`
+- `GET /api/v1/jobs`
+- `POST /api/v1/jobs`
+- `GET /api/v1/jobs/{job_id}`
+- `PATCH /api/v1/jobs/{job_id}`
+- `PATCH /api/v1/jobs/{job_id}/status`
+- `GET /api/v1/cover-letters`
+- `POST /api/v1/jobs/{job_id}/score`
+- `POST /api/v1/jobs/{job_id}/cover-letter/regenerate`
+- `GET /api/v1/tasks/{task_id}`
+- `POST /api/v1/tasks/{task_id}/retry`
+
+Current async note:
+- score and cover-letter regeneration requests return a task id immediately
+- when `REDIS_URL` is configured and a worker is running, execution happens out of process through Dramatiq
+- when `REDIS_URL` is blank, local dev and tests fall back to in-process execution
+
+### Run The API Locally
+
+Start local Postgres and Redis:
+
+```bash
+docker compose up -d
+```
+
+Set these values in `.env` for local API work:
+
+```env
+DATABASE_URL=postgresql+psycopg://jobfit:jobfit@localhost:5432/jobfit
+REDIS_URL=redis://localhost:6379/0
+CLERK_ISSUER=your_clerk_issuer
+CLERK_JWKS_URL=your_clerk_jwks_url
+```
+
+Apply migrations:
+
+```bash
+.venv/bin/python -m alembic upgrade head
+```
+
+Start the API:
+
+```bash
+jobfit-api
+```
+
+Start the worker in another terminal when `REDIS_URL` is configured:
+
+```bash
+python -m jobfit_api.worker
+```
+
+Then check:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/health
+```
+
+If you want to work without real auth during local backend setup, you can temporarily set:
+
+```env
+AUTH_ENABLED=false
+```
+
+Important note:
+- `AUTH_ENABLED=false` is useful for boot and health checks
+- protected product routes such as profile, jobs, and task polling still need a valid authenticated user context for meaningful manual testing
+
+## Frontend App
+
+The repo now includes Phases 5 through 7 of the fullstack plan:
+
+- Bun-based frontend workspace in `frontend/`
+- React 19 + Vite
+- TanStack Router and TanStack Query
+- Clerk wiring for browser auth
+- onboarding, dashboard, jobs list, job detail, profile, letters, and settings pages
+- OpenAPI-derived frontend API contract
+- internal workspace flows for jobs, status tracking, task recovery, and cover letters
+
+### Frontend Environment
+
+Copy the example file:
+
+```bash
+cd frontend
+cp .env.example .env
+```
+
+Set:
+
+```env
+VITE_API_BASE_URL=/api/v1
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_...
+```
+
+### Run The Frontend Locally
+
+From the repo root, make sure the API is running first:
+
+```bash
+jobfit-api
+```
+
+In another terminal:
+
+```bash
+cd frontend
+bun install
+bun run generate:api
+bun run dev
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5173
+```
+
+Current frontend note:
+- the frontend reads the backend OpenAPI schema into `frontend/src/lib/api/generated.ts`
+- the shell is real for profile, jobs, detail, letters, and dashboard pages
+- the browser now supports score and cover-letter regeneration actions from the job detail page
+- failed tasks can now be retried directly from the job detail page
+- the dashboard and jobs list now reflect latest evaluation and workflow state
+
+## Staging Deployment
+
+The repo now includes first-pass staging scaffolding for:
+
+- API container image
+- worker container image
+- Render backend blueprint
+- Vercel frontend routing config
+- migration and startup scripts
+
+Start with:
+
+- [DEPLOYMENT.md](/Users/mhmd_ndri/Desktop/apply/DEPLOYMENT.md)
+- [render.yaml](/Users/mhmd_ndri/Desktop/apply/render.yaml)
+- [frontend/vercel.json](/Users/mhmd_ndri/Desktop/apply/frontend/vercel.json)
 
 ## Daily Usage
 
@@ -275,42 +435,11 @@ If any secret was ever copied into a tracked file or pushed elsewhere, rotate it
 
 ## Publishing
 
-Before pushing this project publicly:
+Use this project as a single monorepo.
 
-1. initialize Git
-2. confirm only safe files are tracked
-3. make the first commit
-4. push to GitHub
+For the full GitHub workflow, including branch naming, safety checks, commit flow, generated OpenAPI files, and deployment-from-monorepo guidance, see:
 
-Suggested commands:
-
-```bash
-cd /path/to/project
-git init
-git add .
-git status
-```
-
-Before committing, verify that these are **not** staged:
-
-- `.env`
-- `credentials/`
-- `data/`
-- `.venv/`
-
-Then commit:
-
-```bash
-git commit -m "Initial commit"
-```
-
-And connect your GitHub remote:
-
-```bash
-git remote add origin <your-github-repo-url>
-git branch -M main
-git push -u origin main
-```
+- [GITHUB_MONOREPO_GUIDE.md](GITHUB_MONOREPO_GUIDE.md)
 
 ## Troubleshooting
 
@@ -335,12 +464,20 @@ The app already includes output sanitization and a repair pass, but if the issue
 For a full implementation report, architecture summary, setup history, and known limitations, see:
 
 - [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md)
+- [FULLSTACK_IMPLEMENTATION_PROMPT.md](FULLSTACK_IMPLEMENTATION_PROMPT.md)
+- [FULLSTACK_IMPLEMENTATION_STATUS.md](FULLSTACK_IMPLEMENTATION_STATUS.md)
+- [NEXT_THREAD_HANDOFF.md](NEXT_THREAD_HANDOFF.md)
 
 ## Test Commands
 
 ```bash
-PYTHONPATH=src python3 -m unittest discover -s tests
 .venv/bin/python -m unittest discover -s tests
+```
+
+If you want to run the suite with an explicit source path:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m unittest discover -s tests
 ```
 
 ## License

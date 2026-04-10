@@ -5,21 +5,32 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "job-fit-evaluator"
 version = "0.1.0"
-description = "CLI for scoring resume-to-job fit with OpenAI and logging results to Google Sheets."
+description = "AI-powered job application workflow with a Python CLI, FastAPI backend, and Bun-based frontend."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
+  "alembic>=1.14.1",
+  "dramatiq[redis]>=1.17.1",
+  "fastapi>=0.115.6",
+  "httpx>=0.28.1",
   "openai>=1.45.0",
+  "psycopg[binary]>=3.2.4",
+  "PyJWT[crypto]>=2.10.1",
+  "redis>=5.2.1",
+  "SQLAlchemy>=2.0.36",
   "gspread>=6.1.2",
   "google-api-python-client>=2.154.0",
   "google-auth>=2.35.0",
   "google-auth-oauthlib>=1.2.1",
   "pydantic>=2.9.2",
   "python-dotenv>=1.0.1",
+  "uvicorn>=0.34.0",
 ]
 
 [project.scripts]
 jobfit = "jobfit_cli.cli:main"
+jobfit-api = "jobfit_api.main:run"
+jobfit-worker = "jobfit_api.worker:run"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -35,6 +35,7 @@ class GoogleSheetsLogger:
         *,
         oauth_client_file: Path | None = None,
         oauth_token_file: Path | None = None,
+        credentials: Any | None = None,
     ) -> None:
         self.auth_settings = GoogleAuthSettings(
             service_account_file=service_account_file,
@@ -42,6 +43,7 @@ class GoogleSheetsLogger:
             oauth_token_file=oauth_token_file,
         )
         self.sheet_id = sheet_id
+        self._credentials = credentials
         self._client = None
         self._spreadsheet = None
         self._worksheet = None
@@ -52,10 +54,13 @@ class GoogleSheetsLogger:
         if self._client is not None:
             return self._client
 
-        credentials, _ = load_google_dependencies(
-            auth_settings=self.auth_settings,
-            scopes=SHEETS_SCOPES,
-        )
+        if self._credentials is not None:
+            credentials = self._credentials
+        else:
+            credentials, _ = load_google_dependencies(
+                auth_settings=self.auth_settings,
+                scopes=SHEETS_SCOPES,
+            )
 
         try:
             import gspread

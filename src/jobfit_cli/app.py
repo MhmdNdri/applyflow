@@ -7,12 +7,20 @@ from pathlib import Path
 import sys
 from typing import Callable, Protocol, TextIO
 
+from jobfit_core.workflows import (
+    JobApplicationService,
+    build_cover_letter_title,
+    format_cover_letter_date,
+    normalize_evaluation,
+    verdict_value,
+)
+
 from .config import AppConfig, ConfigurationError
 from .constants import DEFAULT_APPLICATION_STATUS
 from .docs import GoogleDocsClient
 from .models import JobEvaluation
 from .openai_service import OpenAIEvaluator, OpenAIValidationError
-from .prompts import ApplicantProfile, extract_applicant_profile
+from .prompts import ApplicantProfile
 from .sheets import GoogleSheetsLogger, build_cover_letter_formula
 from .storage import (
     archive_job_description,
@@ -210,24 +218,18 @@ def run_score(
         )
 
     try:
-        emit_progress("Evaluating job fit...", stream=stderr)
         evaluator = evaluator_factory(config)
-        evaluation = evaluator.evaluate(
+        workflow = JobApplicationService(evaluator)
+        artifacts = workflow.score_job(
             resume_text=resume_text,
             context_text=context_text,
             job_description=job_description,
+            progress=lambda message: emit_progress(message, stream=stderr),
         )
-        applicant_profile = extract_applicant_profile(resume_text)
-        cover_letter_date = format_cover_letter_date(datetime.now().astimezone())
-        emit_progress("Generating cover letter...", stream=stderr)
-        cover_letter = evaluator.generate_cover_letter(
-            resume_text=resume_text,
-            context_text=context_text,
-            job_description=job_description,
-            evaluation=evaluation,
-            applicant_profile=applicant_profile,
-            cover_letter_date=cover_letter_date,
-        )
+        evaluation = artifacts.evaluation
+        applicant_profile = artifacts.applicant_profile
+        cover_letter = artifacts.cover_letter
+        cover_letter_date = artifacts.cover_letter_date
     except (ConfigurationError, OpenAIValidationError, ValueError) as exc:
         print(f"Scoring failed: {exc}", file=stderr)
         return 1
@@ -236,7 +238,7 @@ def run_score(
     timestamp = datetime.now(timezone.utc).isoformat()
     date_value = datetime.now().astimezone().date().isoformat()
     profile_hash = compute_profile_hash(resume_text, context_text)
-    model_used = getattr(evaluator, "active_model", config.openai_model)
+    model_used = artifacts.model_used or config.openai_model
     archived_job_path = archive_job_description(
         config.paths,
         run_id,
@@ -421,24 +423,3 @@ def print_score_report(
         print(f"Cover letter doc: {cover_letter_doc_url}", file=stdout)
     print(f"Archived job: {archived_job_path}", file=stdout)
     print(f"Run record: {run_record_path}", file=stdout)
-
-
-def verdict_value(evaluation: JobEvaluation) -> str:
-    return getattr(evaluation.verdict, "value", str(evaluation.verdict))
-
-
-def build_cover_letter_title(
-    *,
-    human_date: str,
-    applicant_name: str | None,
-    company: str | None,
-    role_title: str | None,
-) -> str:
-    name_value = applicant_name or "Candidate"
-    company_value = company or "Unknown Company"
-    role_value = role_title or "Role"
-    return f"{human_date} - {name_value} - {role_value} - {company_value} Cover Letter"
-
-
-def format_cover_letter_date(current_dt: datetime) -> str:
-    return f"{current_dt.day} {current_dt.strftime('%B %Y')}"

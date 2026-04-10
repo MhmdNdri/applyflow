@@ -1,7 +1,39 @@
+# Secrets and local runtime data
 .env
+.env.*
+!.env.example
+credentials/
+data/
+
+# Python
 .venv/
 __pycache__/
-.pytest_cache/
+*.py[cod]
 *.egg-info/
-data/
-credentials/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Frontend
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+frontend/node_modules/
+frontend/dist/
+frontend/.tanstack/
+frontend/.vite/
+frontend/coverage/
+
+# Local databases and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# OS/editor noise
+.DS_Store
+.idea/
+.vscode/

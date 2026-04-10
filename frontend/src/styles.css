@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  --page-ink: #1e2430;
+  --muted-ink: #5e6778;
+  --panel: rgba(255, 252, 245, 0.92);
+  --panel-strong: rgba(255, 249, 236, 0.98);
+  --line: rgba(34, 46, 67, 0.12);
+  --accent: #0f766e;
+  --accent-soft: #d4f4ef;
+  --warn: #ea580c;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  color: var(--page-ink);
+  background:
+    radial-gradient(circle at top left, rgba(255, 196, 122, 0.28), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(17, 134, 121, 0.24), transparent 36%),
+    linear-gradient(180deg, #fcfbf5 0%, #f4efe2 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.18);
+}
+
+.page-shell {
+  min-height: 100vh;
+}
+
+.glass-panel {
+  background: var(--panel);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 24px 60px rgba(71, 51, 8, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.hero-title {
+  font-family: "Fraunces", ui-serif, Georgia, serif;
+}
+
+.grain-overlay {
+  position: relative;
+}
+
+.grain-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.08;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+  background-size: 12px 12px;
+  mix-blend-mode: soft-light;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-rise {
+  animation: rise-in 600ms ease both;
+}
+
+.animate-rise-delay {
+  animation: rise-in 850ms ease both;
+}
+
+.animate-float-soft {
+  animation: float-soft 7s ease-in-out infinite;
+}

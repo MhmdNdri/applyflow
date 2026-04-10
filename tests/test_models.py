@@ -7,6 +7,7 @@ import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from jobfit_cli.models import JobEvaluation, ValidationError, job_evaluation_openai_schema
+from jobfit_api.models import ApplicationStatus, BackgroundTaskStatus, BackgroundTaskType, EvaluationVerdict, db_enum
 
 
 class JobEvaluationTests(unittest.TestCase):
@@ -89,6 +90,19 @@ class JobEvaluationTests(unittest.TestCase):
                     "feedback": "One. Two. Three. Four. Five.",
                 }
             )
+
+
+class ApiEnumModelTests(unittest.TestCase):
+    def test_database_enums_store_values_not_python_member_names(self) -> None:
+        application_status = db_enum(ApplicationStatus, name="application_status")
+        evaluation_verdict = db_enum(EvaluationVerdict, name="evaluation_verdict")
+        task_type = db_enum(BackgroundTaskType, name="background_task_type")
+        task_status = db_enum(BackgroundTaskStatus, name="background_task_status")
+
+        self.assertEqual(application_status.enums, [status.value for status in ApplicationStatus])
+        self.assertEqual(evaluation_verdict.enums, [verdict.value for verdict in EvaluationVerdict])
+        self.assertEqual(task_type.enums, [task.value for task in BackgroundTaskType])
+        self.assertEqual(task_status.enums, [status.value for status in BackgroundTaskStatus])
 
 
 if __name__ == "__main__":  # pragma: no cover
