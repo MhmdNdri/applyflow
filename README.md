@@ -27,7 +27,6 @@ It helps you keep one honest profile, paste job descriptions, score fit from `0-
 
 ```text
 applyflow/
-  api/                    Vercel API entrypoint
   alembic/                Database migrations
   frontend/               React web app
   scripts/                API, worker, and migration start scripts
@@ -38,8 +37,8 @@ applyflow/
   DEPLOYMENT.md           Deployment guide
   Dockerfile.api          API container image
   Dockerfile.worker       Worker container image
+  index.py                Vercel FastAPI entrypoint
   render.yaml             Optional Render blueprint
-  vercel.json             Vercel API routing
 ```
 
 ## Quick Start

@@ -9,8 +9,7 @@ Use demo mode while the product is still moving quickly. Move to worker mode whe
 
 ## Repo Deployment Files
 
-- [api/index.py](/Users/mhmd_ndri/Desktop/apply/api/index.py) exposes the FastAPI app to Vercel.
-- [vercel.json](/Users/mhmd_ndri/Desktop/apply/vercel.json) routes API traffic to the Vercel Python function.
+- [index.py](/Users/mhmd_ndri/Desktop/apply/index.py) exposes the FastAPI app to Vercel's FastAPI preset.
 - [frontend/vercel.json](/Users/mhmd_ndri/Desktop/apply/frontend/vercel.json) keeps frontend SPA routing working.
 - [Dockerfile.api](/Users/mhmd_ndri/Desktop/apply/Dockerfile.api) is for container API hosting.
 - [Dockerfile.worker](/Users/mhmd_ndri/Desktop/apply/Dockerfile.worker) is for container worker hosting.
