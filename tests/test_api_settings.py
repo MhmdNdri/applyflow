@@ -9,7 +9,14 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from jobfit_api.settings import ApiSettings, normalize_database_url, parse_csv, parse_optional_string
+from jobfit_api.settings import (
+    ApiSettings,
+    merge_origins,
+    normalize_database_url,
+    normalize_origin,
+    parse_csv,
+    parse_optional_string,
+)
 
 
 class ApiSettingsTests(unittest.TestCase):
@@ -20,6 +27,15 @@ class ApiSettingsTests(unittest.TestCase):
         self.assertIsNone(parse_optional_string(""))
         self.assertIsNone(parse_optional_string("   "))
         self.assertEqual(parse_optional_string(" value "), "value")
+
+    def test_normalize_origin_removes_trailing_slash(self) -> None:
+        self.assertEqual(normalize_origin(" https://applyflow.vercel.app/ "), "https://applyflow.vercel.app")
+
+    def test_merge_origins_deduplicates_normalized_values(self) -> None:
+        self.assertEqual(
+            merge_origins(["https://a.test/"], ["https://a.test", "https://b.test"]),
+            ["https://a.test", "https://b.test"],
+        )
 
     def test_normalize_database_url_upgrades_plain_postgresql_url(self) -> None:
         self.assertEqual(
@@ -64,6 +80,24 @@ class ApiSettingsTests(unittest.TestCase):
             ["http://localhost:5173", "http://127.0.0.1:5173"],
         )
         self.assertEqual(settings.cors_allowed_origin_regex, r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$")
+
+    def test_from_env_adds_frontend_base_url_to_cors_origins(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with patch.dict(
+                os.environ,
+                {
+                    "FRONTEND_BASE_URL": "https://applyflow.vercel.app/",
+                    "CORS_ALLOWED_ORIGINS": "https://preview.vercel.app",
+                },
+                clear=True,
+            ):
+                settings = ApiSettings.from_env(root)
+
+        self.assertEqual(
+            settings.cors_allowed_origins,
+            ["https://preview.vercel.app", "https://applyflow.vercel.app"],
+        )
 
     def test_from_env_reads_task_execution_mode(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

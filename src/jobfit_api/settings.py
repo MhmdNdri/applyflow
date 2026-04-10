@@ -43,6 +43,22 @@ def parse_optional_string(value: str | None) -> str | None:
     return stripped or None
 
 
+def normalize_origin(value: str) -> str:
+    return value.strip().rstrip("/")
+
+
+def merge_origins(*groups: list[str]) -> list[str]:
+    seen: set[str] = set()
+    origins: list[str] = []
+    for group in groups:
+        for origin in group:
+            normalized = normalize_origin(origin)
+            if normalized and normalized not in seen:
+                origins.append(normalized)
+                seen.add(normalized)
+    return origins
+
+
 @dataclass(slots=True)
 class ApiSettings:
     root: Path
@@ -79,6 +95,13 @@ class ApiSettings:
         if not database_url:
             data_dir.mkdir(parents=True, exist_ok=True)
         default_database_url = f"sqlite:///{(data_dir / 'applyflow-dev.db').resolve().as_posix()}"
+        frontend_base_url = normalize_origin(os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:5173"))
+        cors_allowed_origins = parse_csv(
+            os.getenv(
+                "CORS_ALLOWED_ORIGINS",
+                "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
+            )
+        )
         return cls(
             root=resolved_root,
             app_env=app_env,
@@ -95,14 +118,9 @@ class ApiSettings:
             clerk_jwks_url=parse_optional_string(os.getenv("CLERK_JWKS_URL")),
             clerk_audience=parse_optional_string(os.getenv("CLERK_AUDIENCE")),
             clerk_authorized_party=parse_optional_string(os.getenv("CLERK_AUTHORIZED_PARTY")),
-            frontend_base_url=os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:5173").rstrip("/"),
+            frontend_base_url=frontend_base_url,
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
-            cors_allowed_origins=parse_csv(
-                os.getenv(
-                    "CORS_ALLOWED_ORIGINS",
-                    "http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000",
-                )
-            ),
+            cors_allowed_origins=merge_origins(cors_allowed_origins, [frontend_base_url]),
             cors_allowed_origin_regex=os.getenv(
                 "CORS_ALLOWED_ORIGIN_REGEX",
                 r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
