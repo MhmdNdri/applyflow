@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { Card, EmptyState, PageHeader, ScorePill, StatusPill, buttonClasses } from "@/components/ui";
+import { Card, EmptyState, LoadingState, PageHeader, ScorePill, StatusPill, buttonClasses } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
 import { useJobsQuery, useProfileQuery } from "@/lib/api/hooks";
 import {
@@ -18,7 +18,7 @@ export function DashboardPage() {
   const jobsQuery = useJobsQuery({ enabled: true });
 
   if (jobsQuery.isPending || profileQuery.isPending) {
-    return <div className="text-sm text-[var(--muted-ink)]">Loading dashboard…</div>;
+    return <LoadingState title="Loading dashboard" description="Collecting your latest jobs, scores, and task activity." />;
   }
 
   if (jobsQuery.isError) {

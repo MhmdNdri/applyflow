@@ -7,7 +7,8 @@ import { describeApiError } from "@/lib/api/client";
 import { useAuthMeQuery, useJobsQuery, useProfileQuery, isApiError } from "@/lib/api/hooks";
 import { buildDashboardMetrics } from "@/lib/jobs";
 
-import { Button, Card, buttonClasses } from "./ui";
+import { Logo } from "./logo";
+import { Button, Card, LoadingState, buttonClasses } from "./ui";
 
 const navItems = [
   { label: "Dashboard", to: "/app/dashboard", icon: LayoutDashboard },
@@ -90,7 +91,10 @@ export function AppShell({
         <aside className="glass-panel grain-overlay relative min-w-0 rounded-[32px] border border-[var(--line)] p-6">
           <div className="min-w-0 space-y-8">
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">Applyflow</p>
+              <div className="flex items-center gap-2.5">
+                <Logo size={32} />
+                <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[var(--accent)]">Applyflow</p>
+              </div>
               <div className="min-w-0">
                 <h1 className="hero-title text-3xl text-[var(--page-ink)]">Application cockpit</h1>
                 <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">
@@ -181,10 +185,9 @@ export function AppShell({
 function FullPageMessage({ title, description }: { title: string; description: string }) {
   return (
     <div className="page-shell flex items-center justify-center px-4 py-10">
-      <Card className="max-w-lg space-y-3 p-8 text-center">
-        <h1 className="hero-title text-3xl text-[var(--page-ink)]">{title}</h1>
-        <p className="text-sm leading-7 text-[var(--muted-ink)]">{description}</p>
-      </Card>
+      <div className="w-full max-w-lg">
+        <LoadingState title={title} description={description} />
+      </div>
     </div>
   );
 }

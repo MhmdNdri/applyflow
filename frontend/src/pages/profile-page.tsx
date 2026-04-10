@@ -2,7 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { useState } from "react";
 
 import { ProfileDocumentField } from "@/components/profile-document-field";
-import { Button, Card, EmptyState, Field, PageHeader, TextInput } from "@/components/ui";
+import { Button, Card, EmptyState, Field, LoadingState, PageHeader, TextInput } from "@/components/ui";
 import { useProfileQuery, useUpdateProfileMutation } from "@/lib/api/hooks";
 import { fileToUploadPayload, type UploadedProfileDocumentPayload } from "@/lib/uploads";
 
@@ -10,7 +10,7 @@ export function ProfilePage() {
   const profileQuery = useProfileQuery({ enabled: true });
 
   if (profileQuery.isPending) {
-    return <div className="text-sm text-[var(--muted-ink)]">Loading profile…</div>;
+    return <LoadingState title="Loading profile" description="Opening the latest resume and honest-context snapshot." />;
   }
 
   if (profileQuery.isError || !profileQuery.data) {
@@ -61,6 +61,8 @@ function ProfileEditor() {
         eyebrow="Profile"
         title="Keep your core application context sharp"
         description="Updating this page creates fresh resume and context versions in the API-backed database, so future evaluations can use the newest state while old runs stay reproducible."
+        backTo="/app/dashboard"
+        backLabel="Back to dashboard"
       />
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">

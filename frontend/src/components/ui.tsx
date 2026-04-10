@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { ArrowLeft, LoaderCircle, Sparkles } from "lucide-react";
 import type { ButtonHTMLAttributes, HTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 
 import { humanizeStatus } from "@/lib/jobs";
@@ -23,6 +24,38 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "secondary" | "ghost" | "accent" }) {
   return <button className={clsx(buttonClasses(variant), className)} {...props} />;
+}
+
+export function BackButton({
+  label = "Back",
+  fallbackPath = "/app/dashboard",
+  className,
+}: {
+  label?: string;
+  fallbackPath?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={clsx(
+        buttonClasses("ghost"),
+        "group w-fit gap-2 border border-transparent bg-white/50 px-3 text-[var(--page-ink)] hover:border-[var(--line)] hover:bg-white/80",
+        className,
+      )}
+      onClick={() => {
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        window.location.assign(fallbackPath);
+      }}
+      aria-label={label}
+    >
+      <ArrowLeft size={16} className="transition group-hover:-translate-x-0.5" />
+      <span>{label}</span>
+    </button>
+  );
 }
 
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -88,20 +121,27 @@ export function PageHeader({
   title,
   description,
   action,
+  backTo,
+  backLabel = "Back",
 }: {
   eyebrow?: string;
   title: string;
   description: string;
   action?: ReactNode;
+  backTo?: string;
+  backLabel?: string;
 }) {
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-      <div className="max-w-2xl space-y-3">
-        {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">{eyebrow}</p> : null}
-        <h1 className="hero-title text-4xl leading-tight text-[var(--page-ink)] md:text-5xl">{title}</h1>
-        <p className="text-base leading-7 text-[var(--muted-ink)]">{description}</p>
+    <div className="space-y-4">
+      {backTo ? <BackButton fallbackPath={backTo} label={backLabel} /> : null}
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div className="max-w-2xl space-y-3">
+          {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">{eyebrow}</p> : null}
+          <h1 className="hero-title text-4xl leading-tight text-[var(--page-ink)] md:text-5xl">{title}</h1>
+          <p className="text-base leading-7 text-[var(--muted-ink)]">{description}</p>
+        </div>
+        {action}
       </div>
-      {action}
     </div>
   );
 }
@@ -145,6 +185,33 @@ export function EmptyState({
       <h2 className="text-lg font-semibold text-[var(--page-ink)]">{title}</h2>
       <p className="text-sm leading-6 text-[var(--muted-ink)]">{description}</p>
       {action}
+    </Card>
+  );
+}
+
+export function LoadingState({
+  title = "Loading",
+  description = "Preparing your workspace.",
+}: {
+  title?: string;
+  description?: string;
+}) {
+  return (
+    <Card className="relative overflow-hidden p-7">
+      <div className="absolute right-5 top-5 h-20 w-20 rounded-full bg-[var(--accent-soft)] blur-2xl" />
+      <div className="relative flex items-center gap-4">
+        <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[var(--page-ink)] text-white shadow-[0_18px_34px_rgba(27,35,52,0.14)]">
+          <LoaderCircle size={22} className="animate-spin" />
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Sparkles size={15} className="text-[var(--accent)]" />
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Working</p>
+          </div>
+          <h2 className="mt-1 text-lg font-semibold text-[var(--page-ink)]">{title}</h2>
+          <p className="mt-1 text-sm leading-6 text-[var(--muted-ink)]">{description}</p>
+        </div>
+      </div>
     </Card>
   );
 }

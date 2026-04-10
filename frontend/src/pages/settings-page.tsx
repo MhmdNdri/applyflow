@@ -8,6 +8,8 @@ export function SettingsPage() {
         eyebrow="Settings"
         title="Environment and workspace posture"
         description="This view keeps the current browser setup visible without making the product feel like a developer demo."
+        backTo="/app/dashboard"
+        backLabel="Back to dashboard"
       />
 
       <div className="grid gap-5 lg:grid-cols-2">

@@ -12,6 +12,7 @@ import {
   Target,
 } from "lucide-react";
 
+import { Logo } from "@/components/logo";
 import { Button, Card, buttonClasses } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
 import { useJobsQuery, useProfileQuery } from "@/lib/api/hooks";
@@ -32,7 +33,7 @@ export function LandingPage() {
       <div className="mx-auto flex max-w-[1480px] flex-col gap-5">
         <header className="glass-panel animate-rise flex flex-col gap-4 rounded-[30px] border border-[var(--line)] px-6 py-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-[var(--page-ink)] px-3 py-2 text-sm font-semibold text-white">AF</div>
+            <Logo size={36} />
             <div>
               <p className="hero-title text-2xl text-[var(--page-ink)]">Applyflow</p>
               <p className="text-sm text-[var(--muted-ink)]">One place to evaluate roles, write better letters, and track the search.</p>

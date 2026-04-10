@@ -11,7 +11,7 @@ import {
 import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
 import { startTransition, useDeferredValue, useState } from "react";
 
-import { Button, Card, EmptyState, Field, PageHeader, ScorePill, Select, StatusPill, TextArea, TextInput } from "@/components/ui";
+import { Button, Card, EmptyState, Field, LoadingState, PageHeader, ScorePill, Select, StatusPill, TextArea, TextInput } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
 import { useCreateJobMutation, useJobsQuery } from "@/lib/api/hooks";
 import type { JobListItemResponse } from "@/lib/api/types";
@@ -143,7 +143,7 @@ export function JobsPage() {
   });
 
   if (jobsQuery.isPending) {
-    return <div className="text-sm text-[var(--muted-ink)]">Loading jobs…</div>;
+    return <LoadingState title="Loading pipeline" description="Opening the latest roles, statuses, scores, and saved letters." />;
   }
 
   if (jobsQuery.isError) {

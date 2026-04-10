@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
-import { Card, EmptyState, PageHeader, ScorePill, StatusPill, buttonClasses } from "@/components/ui";
+import { Card, EmptyState, LoadingState, PageHeader, ScorePill, StatusPill, buttonClasses } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
 import { useCoverLettersQuery } from "@/lib/api/hooks";
 import { formatTimestamp } from "@/lib/jobs";
@@ -9,7 +9,7 @@ export function LettersPage() {
   const lettersQuery = useCoverLettersQuery({ enabled: true });
 
   if (lettersQuery.isPending) {
-    return <div className="text-sm text-[var(--muted-ink)]">Loading saved letters…</div>;
+    return <LoadingState title="Loading letters" description="Gathering your generated cover letters and their linked roles." />;
   }
 
   if (lettersQuery.isError) {
@@ -29,6 +29,8 @@ export function LettersPage() {
         eyebrow="Letters"
         title="Internal cover-letter library"
         description="Every generated letter lives here inside the workspace, tied to its role, score, and current application stage."
+        backTo="/app/dashboard"
+        backLabel="Back to dashboard"
         action={
           <div className="flex flex-wrap gap-3">
             <Link to="/app/jobs" className={buttonClasses("secondary")}>

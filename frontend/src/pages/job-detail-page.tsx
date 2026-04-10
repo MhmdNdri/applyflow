@@ -3,7 +3,7 @@ import { Link, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
-import { Button, Card, EmptyState, Field, PageHeader, ScorePill, Select, StatusPill, buttonClasses } from "@/components/ui";
+import { Button, Card, EmptyState, Field, LoadingState, PageHeader, ScorePill, Select, StatusPill, buttonClasses } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
 import {
   useJobDetailQuery,
@@ -21,7 +21,7 @@ export function JobDetailPage() {
   const jobQuery = useJobDetailQuery(jobId, { enabled: true });
 
   if (jobQuery.isPending) {
-    return <div className="text-sm text-[var(--muted-ink)]">Loading job detail…</div>;
+    return <LoadingState title="Loading job detail" description="Rebuilding this role's score, letter, status, and workflow context." />;
   }
 
   if (jobQuery.isError || !jobQuery.data) {
@@ -116,11 +116,10 @@ function JobDetailContent({ jobId }: { jobId: string }) {
         eyebrow="Job detail"
         title={`${job.role_title || "Untitled role"} · ${job.company || "Unknown company"}`}
         description="Run the AI workflow, review the strongest fit signals, keep the latest letter close, and update the application stage without losing context."
+        backTo="/app/jobs"
+        backLabel="Back to pipeline"
         action={
           <div className="flex flex-wrap gap-3">
-            <Link to="/app/jobs" className={buttonClasses("secondary")}>
-              Back to pipeline
-            </Link>
             <Link to="/app/dashboard" className={buttonClasses("ghost")}>
               Dashboard
             </Link>
