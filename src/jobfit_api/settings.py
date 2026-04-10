@@ -36,6 +36,13 @@ def parse_csv(value: str | None) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def parse_optional_string(value: str | None) -> str | None:
+    if value is None:
+        return None
+    stripped = value.strip()
+    return stripped or None
+
+
 @dataclass(slots=True)
 class ApiSettings:
     root: Path
@@ -57,18 +64,20 @@ class ApiSettings:
     log_level: str = "INFO"
     cors_allowed_origins: list[str] = field(default_factory=list)
     cors_allowed_origin_regex: str | None = None
+    task_execution_mode: str = "background"
 
     @classmethod
     def from_env(cls, root: Path | None = None) -> "ApiSettings":
         resolved_root = (root or Path.cwd()).resolve()
         load_dotenv_file(resolved_root)
 
-        data_dir = resolved_root / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
-
         app_env = os.getenv("APP_ENV", "development")
         api_prefix = os.getenv("API_PREFIX", "/api/v1")
         api_port = int(os.getenv("API_PORT", "8000"))
+        database_url = os.getenv("DATABASE_URL")
+        data_dir = resolved_root / "data"
+        if not database_url:
+            data_dir.mkdir(parents=True, exist_ok=True)
         default_database_url = f"sqlite:///{(data_dir / 'applyflow-dev.db').resolve().as_posix()}"
         return cls(
             root=resolved_root,
@@ -78,14 +87,14 @@ class ApiSettings:
             api_prefix=api_prefix,
             api_title=os.getenv("API_TITLE", "Applyflow API"),
             api_version=os.getenv("API_VERSION", "0.1.0"),
-            database_url=normalize_database_url(os.getenv("DATABASE_URL", default_database_url)),
+            database_url=normalize_database_url(database_url or default_database_url),
             database_echo=parse_bool(os.getenv("DATABASE_ECHO"), default=False),
-            redis_url=os.getenv("REDIS_URL"),
+            redis_url=parse_optional_string(os.getenv("REDIS_URL")),
             auth_enabled=parse_bool(os.getenv("AUTH_ENABLED"), default=True),
-            clerk_issuer=os.getenv("CLERK_ISSUER"),
-            clerk_jwks_url=os.getenv("CLERK_JWKS_URL"),
-            clerk_audience=os.getenv("CLERK_AUDIENCE"),
-            clerk_authorized_party=os.getenv("CLERK_AUTHORIZED_PARTY"),
+            clerk_issuer=parse_optional_string(os.getenv("CLERK_ISSUER")),
+            clerk_jwks_url=parse_optional_string(os.getenv("CLERK_JWKS_URL")),
+            clerk_audience=parse_optional_string(os.getenv("CLERK_AUDIENCE")),
+            clerk_authorized_party=parse_optional_string(os.getenv("CLERK_AUTHORIZED_PARTY")),
             frontend_base_url=os.getenv("FRONTEND_BASE_URL", "http://127.0.0.1:5173").rstrip("/"),
             log_level=os.getenv("LOG_LEVEL", "INFO").upper(),
             cors_allowed_origins=parse_csv(
@@ -98,6 +107,7 @@ class ApiSettings:
                 "CORS_ALLOWED_ORIGIN_REGEX",
                 r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
             ),
+            task_execution_mode=os.getenv("TASK_EXECUTION_MODE", "background").strip().lower(),
         )
 
     @property
@@ -116,5 +126,8 @@ class ApiSettings:
 
         if self.app_env == "production" and self.database_url.startswith("sqlite"):
             errors.append("SQLite is not supported for production API deployments.")
+
+        if self.task_execution_mode not in {"background", "inline"}:
+            errors.append("TASK_EXECUTION_MODE must be either 'background' or 'inline'.")
 
         return errors

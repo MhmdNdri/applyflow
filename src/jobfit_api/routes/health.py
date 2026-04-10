@@ -28,6 +28,11 @@ def get_health(request: Request) -> HealthResponse:
     except Exception as exc:  # pragma: no cover
         services["redis"] = ServiceHealth(status="degraded", detail=str(exc))
 
+    services["task_executor"] = ServiceHealth(
+        status="ok",
+        detail=f"TASK_EXECUTION_MODE={settings.task_execution_mode}",
+    )
+
     overall_status = "ok" if all(service.status != "degraded" for service in services.values()) else "degraded"
     return HealthResponse(
         status=overall_status,

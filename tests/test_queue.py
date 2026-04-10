@@ -21,7 +21,7 @@ class FakeBackgroundTasks:
 
 class QueueDispatchTests(unittest.TestCase):
     def test_dispatch_task_falls_back_to_in_process_when_redis_is_not_configured(self) -> None:
-        settings = SimpleNamespace(redis_url=None)
+        settings = SimpleNamespace(redis_url=None, task_execution_mode="background")
         app = SimpleNamespace(
             state=SimpleNamespace(
                 settings=settings,
@@ -39,10 +39,27 @@ class QueueDispatchTests(unittest.TestCase):
         self.assertEqual(args[1], "fake-evaluator-factory")
         self.assertEqual(args[2], "task-123")
 
+    def test_dispatch_task_can_run_inline_for_serverless_demo_mode(self) -> None:
+        settings = SimpleNamespace(redis_url=None, task_execution_mode="inline")
+        app = SimpleNamespace(
+            state=SimpleNamespace(
+                settings=settings,
+                evaluator_factory="fake-evaluator-factory",
+            )
+        )
+        background_tasks = FakeBackgroundTasks()
+
+        with patch("jobfit_api.task_processing.run_task") as run_task_mock:
+            mode = dispatch_task(app, background_tasks, "task-inline")
+
+        self.assertEqual(mode, "inline")
+        run_task_mock.assert_called_once_with(settings, "fake-evaluator-factory", "task-inline")
+        self.assertEqual(background_tasks.calls, [])
+
     def test_dispatch_task_uses_dramatiq_worker_when_redis_is_configured(self) -> None:
         app = SimpleNamespace(
             state=SimpleNamespace(
-                settings=SimpleNamespace(redis_url="redis://localhost:6379/0"),
+                settings=SimpleNamespace(redis_url="redis://localhost:6379/0", task_execution_mode="background"),
                 evaluator_factory="fake-evaluator-factory",
             )
         )

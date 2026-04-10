@@ -9,6 +9,13 @@ from fastapi import BackgroundTasks, FastAPI
 
 def dispatch_task(app: FastAPI, background_tasks: BackgroundTasks, task_id: str) -> str:
     settings = app.state.settings
+    execution_mode = getattr(settings, "task_execution_mode", "background")
+
+    if execution_mode == "inline":
+        from .task_processing import run_task
+
+        run_task(settings, app.state.evaluator_factory, task_id)
+        return "inline"
 
     if settings.redis_url:
         from .worker import run_task_actor

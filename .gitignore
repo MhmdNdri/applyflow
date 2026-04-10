@@ -5,6 +5,14 @@
 credentials/
 data/
 
+# Internal planning/documentation notes
+docs/
+FULLSTACK_IMPLEMENTATION_PROMPT.md
+FULLSTACK_IMPLEMENTATION_STATUS.md
+GITHUB_MONOREPO_GUIDE.md
+NEXT_THREAD_HANDOFF.md
+PROJECT_DOCUMENTATION.md
+
 # Python
 .venv/
 __pycache__/
@@ -18,6 +26,7 @@ coverage/
 htmlcov/
 
 # Frontend
+.vercel/
 frontend/.env
 frontend/.env.*
 !frontend/.env.example

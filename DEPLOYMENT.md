@@ -1,58 +1,167 @@
 # Applyflow Deployment Guide
 
-This guide covers the recommended staging setup for the current Applyflow architecture:
+This repo can now deploy in two shapes:
 
-- frontend on Vercel
-- API on Render
-- worker on Render
-- Postgres on Neon
-- Redis on Upstash or Render Redis
+1. **Free/staging demo mode:** frontend on Vercel, API on Vercel, Neon Postgres, no Redis, no worker.
+2. **Production worker mode:** frontend on Vercel, API and worker on a backend host, Neon/Postgres, Redis.
 
-The repo already includes:
+Use demo mode while the product is still moving quickly. Move to worker mode when scoring tasks need stronger reliability, retries, and longer execution time.
 
-- [Dockerfile.api](/Users/mhmd_ndri/Desktop/apply/Dockerfile.api)
-- [Dockerfile.worker](/Users/mhmd_ndri/Desktop/apply/Dockerfile.worker)
-- [render.yaml](/Users/mhmd_ndri/Desktop/apply/render.yaml)
-- [frontend/vercel.json](/Users/mhmd_ndri/Desktop/apply/frontend/vercel.json)
-- [scripts/start_api.sh](/Users/mhmd_ndri/Desktop/apply/scripts/start_api.sh)
-- [scripts/start_worker.sh](/Users/mhmd_ndri/Desktop/apply/scripts/start_worker.sh)
-- [scripts/run_migrations.sh](/Users/mhmd_ndri/Desktop/apply/scripts/run_migrations.sh)
+## Repo Deployment Files
 
-## Deployment Shape
+- [api/index.py](/Users/mhmd_ndri/Desktop/apply/api/index.py) exposes the FastAPI app to Vercel.
+- [vercel.json](/Users/mhmd_ndri/Desktop/apply/vercel.json) routes API traffic to the Vercel Python function.
+- [frontend/vercel.json](/Users/mhmd_ndri/Desktop/apply/frontend/vercel.json) keeps frontend SPA routing working.
+- [Dockerfile.api](/Users/mhmd_ndri/Desktop/apply/Dockerfile.api) is for container API hosting.
+- [Dockerfile.worker](/Users/mhmd_ndri/Desktop/apply/Dockerfile.worker) is for container worker hosting.
+- [render.yaml](/Users/mhmd_ndri/Desktop/apply/render.yaml) is the optional Render blueprint.
 
-Use three deployed services:
+## Option A: Free Vercel Demo Mode
 
-1. `applyflow-web`
-   - Vercel project
-   - root directory: `frontend`
-   - static SPA build
+This is the cheapest way to get the app online.
 
-2. `applyflow-api-staging`
-   - Render web service
-   - Docker runtime
-   - serves the FastAPI app
+Architecture:
 
-3. `applyflow-worker-staging`
-   - Render worker service
-   - Docker runtime
-   - runs Dramatiq jobs for score and cover-letter tasks
+- Vercel project 1: `applyflow-web`
+- Vercel project 2: `applyflow-api`
+- Neon free Postgres
+- Clerk auth
+- OpenAI API
+- `REDIS_URL` blank
+- `TASK_EXECUTION_MODE=inline`
 
-Shared managed services:
+Important tradeoff:
 
-- Neon Postgres
-- Redis
+- The score request runs inside the API request instead of a separate worker.
+- The browser still receives a task id and polls normally.
+- This is good for demos and personal staging, but not ideal for heavy public traffic.
 
-## Backend Environment Variables
+### 1. Deploy The Frontend On Vercel
 
-Set these on both the API and worker:
+Create a Vercel project from the GitHub repo.
+
+Set:
+
+```text
+Root Directory: frontend
+Application Preset: Vite
+Build Command: bun run build
+Output Directory: dist
+Install Command: bun install
+```
+
+Frontend environment variables:
+
+```env
+VITE_CLERK_PUBLISHABLE_KEY=pk_test_or_live_...
+VITE_API_BASE_URL=https://your-api-project.vercel.app/api/v1
+```
+
+If the API project does not exist yet, add a temporary placeholder and update it after deploying the API.
+
+### 2. Deploy The API On Vercel
+
+Create a second Vercel project from the same GitHub repo.
+
+Set:
+
+```text
+Root Directory: .
+Application Preset: Other
+```
+
+If Vercel detects Python/FastAPI automatically, that is fine too. The important part is that this project uses the repo root, not `frontend`.
+
+API environment variables:
 
 ```env
 APP_ENV=staging
+API_PREFIX=/api/v1
+API_TITLE=Applyflow API
+API_VERSION=0.1.0
+DATABASE_URL=postgresql+psycopg://...
+REDIS_URL=
+TASK_EXECUTION_MODE=inline
+AUTH_ENABLED=true
+LOG_LEVEL=INFO
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-5.4-mini
+CLERK_ISSUER=https://your-clerk-domain.clerk.accounts.dev
+CLERK_JWKS_URL=https://your-clerk-domain.clerk.accounts.dev/.well-known/jwks.json
+CLERK_AUDIENCE=
+CLERK_AUTHORIZED_PARTY=
+FRONTEND_BASE_URL=https://your-frontend-project.vercel.app
+CORS_ALLOWED_ORIGINS=https://your-frontend-project.vercel.app
+```
+
+Do not put frontend-only variables such as `VITE_CLERK_PUBLISHABLE_KEY` in the API project unless you specifically need them there.
+
+### 3. Run Database Migrations
+
+Vercel will not run Alembic migrations for you. Run migrations from your local machine against the Neon database:
+
+```bash
+cd /Users/mhmd_ndri/Desktop/apply
+source .venv/bin/activate
+python -m alembic upgrade head
+```
+
+Make sure your local `.env` has the same `DATABASE_URL` as the deployed API when you run this.
+
+### 4. Wire The Frontend To The API
+
+After the API deploy succeeds, copy the API Vercel URL into the frontend project:
+
+```env
+VITE_API_BASE_URL=https://your-api-project.vercel.app/api/v1
+```
+
+Redeploy the frontend.
+
+### 5. Smoke Test Demo Mode
+
+Check API health:
+
+```bash
+curl https://your-api-project.vercel.app/api/v1/health
+```
+
+Expected:
+
+- `database.status` is `ok`
+- `redis.status` is `not_configured`
+- `task_executor.detail` is `TASK_EXECUTION_MODE=inline`
+
+Then open the frontend:
+
+1. Sign in with Clerk.
+2. Create or update your profile.
+3. Create a job.
+4. Click score/regenerate.
+5. Wait for the request to finish and confirm the task becomes completed.
+
+## Option B: Production Worker Mode
+
+Use this when you are ready to pay for a backend host and want a more reliable architecture.
+
+Architecture:
+
+- Vercel frontend
+- Render/Railway/Fly/EC2 API service
+- Render/Railway/Fly/EC2 worker service
+- Neon/Postgres
+- Redis
+
+Backend environment variables for both API and worker:
+
+```env
+APP_ENV=production
 LOG_LEVEL=INFO
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5.4-mini
 DATABASE_URL=postgresql+psycopg://...
 REDIS_URL=redis://...
+TASK_EXECUTION_MODE=background
 AUTH_ENABLED=true
 CLERK_ISSUER=https://your-clerk-domain.clerk.accounts.dev
 CLERK_JWKS_URL=https://your-clerk-domain.clerk.accounts.dev/.well-known/jwks.json
@@ -60,150 +169,54 @@ CLERK_AUDIENCE=
 CLERK_AUTHORIZED_PARTY=
 ```
 
-Set these on the API service too:
+API-only environment variables:
 
 ```env
 FRONTEND_BASE_URL=https://your-frontend-domain.vercel.app
 CORS_ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app
 ```
 
-Optional:
-
-```env
-API_TITLE=Applyflow API
-API_VERSION=0.1.0
-API_PREFIX=/api/v1
-```
-
-## Frontend Environment Variables
-
-Set these on Vercel:
-
-```env
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_or_test_...
-VITE_API_BASE_URL=https://your-api-domain.onrender.com/api/v1
-```
-
-## Render Setup
-
-### Option A: Use The Blueprint
-
-1. Push this repo to GitHub.
-2. In Render, create a new Blueprint from the repo.
-3. Render will detect [render.yaml](/Users/mhmd_ndri/Desktop/apply/render.yaml).
-4. Fill in all `sync: false` environment variables.
-5. Deploy both services.
-
-### Option B: Create Services Manually
-
-Create the API service:
-
-- runtime: Docker
-- dockerfile: [Dockerfile.api](/Users/mhmd_ndri/Desktop/apply/Dockerfile.api)
-- health check path: `/api/v1/health`
-
-Create the worker service:
-
-- runtime: Docker
-- dockerfile: [Dockerfile.worker](/Users/mhmd_ndri/Desktop/apply/Dockerfile.worker)
-
-### Run Migrations
-
-Before treating staging as healthy, run:
+The API service should run:
 
 ```bash
-python -m alembic upgrade head
+./scripts/start_api.sh
 ```
 
-If your provider gives you a shell inside the API image, run:
+The worker service should run:
+
+```bash
+./scripts/start_worker.sh
+```
+
+Run migrations before sending real traffic:
 
 ```bash
 ./scripts/run_migrations.sh
 ```
 
-Run migrations:
+## Local Pre-Deploy Checks
 
-- after the first deploy
-- after every schema-changing release
-- before sending real traffic to a fresh environment
-
-## Vercel Setup
-
-1. Create a Vercel project from the repo.
-2. Set the project root directory to:
-
-```text
-frontend
-```
-
-3. Keep the default Vite build behavior.
-4. Add the frontend environment variables.
-5. Deploy.
-
-The SPA routing rewrite is already handled by [frontend/vercel.json](/Users/mhmd_ndri/Desktop/apply/frontend/vercel.json).
-
-## Staging Smoke Test
-
-After deployment:
-
-1. Check the API health route:
+From the repo root:
 
 ```bash
-curl https://your-api-domain.onrender.com/api/v1/health
+cd /Users/mhmd_ndri/Desktop/apply
+source .venv/bin/activate
+python -m unittest discover -s tests
 ```
 
-Expected:
+Frontend:
 
-- database `ok`
-- redis `ok`
-
-2. Open the frontend.
-3. Sign in with Clerk.
-4. Create or update a profile.
-5. Create a job.
-6. Click `Score this job`.
-7. Confirm:
-   - task becomes `queued`
-   - worker picks it up
-   - task becomes `completed`
-   - evaluation appears
-   - cover letter appears
-
-8. If possible, force a failing task in staging or a preview environment and verify:
-   - the task shows `failed`
-   - retry is available
-   - retry can recover the job detail flow
-
-## Operational Checklist
-
-Before each deploy:
-
-- run:
-  - `python -m unittest discover -s tests`
-  - `cd frontend && bun test`
-  - `cd frontend && bun run build`
-- check the migration diff
-- make sure the API and worker share the same environment values
-
-After each deploy:
-
-- run migrations if needed
-- verify `/api/v1/health`
-- verify one end-to-end score task
-- verify worker logs show task execution
-
-## Rollback Strategy
-
-If a deployment breaks:
-
-1. Roll back the frontend first if the issue is browser-only.
-2. Roll back the API and worker together if the issue is backend/runtime related.
-3. If the release included a migration:
-   - prefer forward-fixing unless the migration is known-safe to reverse
-   - do not drop production data casually
+```bash
+cd /Users/mhmd_ndri/Desktop/apply/frontend
+bun run generate:api
+bun test
+bun run build
+```
 
 ## Current Limits
 
-- The browser product is internal-workspace-first and no longer depends on Google integrations.
-- The CLI still contains legacy Google export behavior, but that is separate from the deployed browser product.
-- Worker mode requires Redis. Without Redis, the API falls back to in-process task execution, which is only meant for local development.
+- Vercel demo mode has no Redis worker and no delayed retry queue.
+- OpenAI usage is still paid even if hosting is free.
+- Long scoring requests can hit Vercel function duration limits.
+- The browser product stores cover letters internally in the database.
+- The legacy CLI still contains Google Docs/Sheets export behavior, but the web product does not require Google access.
