@@ -107,7 +107,7 @@ const settingsRoute = createRoute({
   getParentRoute: () => appRoute,
   path: "/settings",
   component: () => (
-    <AppShell title="Settings" description="Environment and rollout context for the frontend shell.">
+    <AppShell title="Preferences" description="Workspace defaults, profile hygiene, and privacy notes for your application cockpit.">
       <SettingsPage />
     </AppShell>
   ),

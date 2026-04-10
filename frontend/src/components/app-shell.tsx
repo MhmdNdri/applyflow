@@ -15,7 +15,7 @@ const navItems = [
   { label: "Pipeline", to: "/app/jobs", icon: BriefcaseBusiness },
   { label: "Letters", to: "/app/letters", icon: FileText },
   { label: "Profile", to: "/app/profile", icon: Sparkles },
-  { label: "Settings", to: "/app/settings", icon: Settings2 },
+  { label: "Preferences", to: "/app/settings", icon: Settings2 },
 ] as const;
 
 export function AppShell({
