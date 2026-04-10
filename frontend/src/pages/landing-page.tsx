@@ -5,6 +5,7 @@ import {
   BrainCircuit,
   BriefcaseBusiness,
   CheckCircle2,
+  Clock3,
   FilePenLine,
   Gauge,
   Rows3,
@@ -16,7 +17,8 @@ import { Logo } from "@/components/logo";
 import { Button, Card, buttonClasses } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
 import { useJobsQuery, useProfileQuery } from "@/lib/api/hooks";
-import { buildDashboardMetrics, humanizeStatus } from "@/lib/jobs";
+import type { JobListItemResponse } from "@/lib/api/types";
+import { buildDashboardMetrics, buildJobWorkflowSummary, humanizeStatus } from "@/lib/jobs";
 
 export function LandingPage() {
   const { isLoaded, isSignedIn } = useAuth();
@@ -27,6 +29,8 @@ export function LandingPage() {
   const metrics = buildDashboardMetrics(jobsQuery.data ?? []);
   const workspaceTarget = profileQuery.data ? "/app/dashboard" : "/app/onboarding";
   const viewerName = profileQuery.data?.display_name || user?.firstName || "there";
+  const firstName = viewerName.split(" ")[0] || "there";
+  const workspaceCta = profileQuery.data ? "Go to dashboard" : "Finish setup";
 
   return (
     <div className="page-shell px-4 py-5 md:px-6 md:py-6">
@@ -48,7 +52,7 @@ export function LandingPage() {
             </a>
             {isLoaded && isSignedIn ? (
               <Link to={workspaceTarget} className={buttonClasses("accent")}>
-                {profileQuery.data ? "Open workspace" : "Finish setup"} <ArrowRight size={16} />
+                {workspaceCta} <ArrowRight size={16} />
               </Link>
             ) : (
               <>
@@ -82,7 +86,7 @@ export function LandingPage() {
               <div className="flex flex-wrap items-center gap-3">
                 {isLoaded && isSignedIn ? (
                   <Link to={workspaceTarget} className={buttonClasses("accent")}>
-                    {profileQuery.data ? "Return to your dashboard" : "Complete your setup"} <ArrowRight size={16} />
+                    {workspaceCta} <ArrowRight size={16} />
                   </Link>
                 ) : (
                   <>
@@ -114,72 +118,15 @@ export function LandingPage() {
             <div className="animate-rise-delay">
               {isLoaded && isSignedIn ? (
                 <Card className="animate-float-soft border-[rgba(15,118,110,0.18)] bg-[linear-gradient(160deg,rgba(243,252,249,0.96)_0%,rgba(255,249,236,0.98)_100%)] p-6 md:p-7">
-                  <div className="space-y-5">
-                    <div className="rounded-[24px] border border-[rgba(15,118,110,0.15)] bg-white/78 px-5 py-5">
-                      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Welcome back</p>
-                      {jobsQuery.isPending ? (
-                        <p className="mt-3 text-sm leading-6 text-[var(--muted-ink)]">Loading the latest shape of your search…</p>
-                      ) : jobsQuery.isError ? (
-                        <>
-                          <p className="mt-3 text-xl font-semibold text-[var(--page-ink)]">We could not load your roles yet</p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">{describeApiError(jobsQuery.error)}</p>
-                        </>
-                      ) : !profileQuery.data ? (
-                        <>
-                          <p className="mt-3 text-xl font-semibold text-[var(--page-ink)]">Let’s finish your foundation, {viewerName}</p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">
-                            Add your resume and honest context first, then the dashboard can score roles against something real.
-                          </p>
-                        </>
-                      ) : latestJob ? (
-                        <>
-                          <p className="mt-3 text-xl font-semibold text-[var(--page-ink)]">
-                            {latestJob.role_title || "Untitled role"} · {latestJob.company || "Unknown company"}
-                          </p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">
-                            Latest status: {humanizeStatus(latestJob.current_status)}. You currently have {jobsQuery.data?.length || 0} role(s) in motion, {viewerName}.
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <p className="mt-3 text-xl font-semibold text-[var(--page-ink)]">Your workspace is ready for the first role</p>
-                          <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">
-                            Your profile is in place. Create the first job and the workspace will start reflecting the real shape of your search.
-                          </p>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { label: "Tracked roles", value: String(metrics.total) },
-                        { label: "Interviews", value: String(metrics.interviewing) },
-                        { label: "Waiting", value: String(metrics.waiting) },
-                        { label: "Offers", value: String(metrics.offers) },
-                      ].map((item) => (
-                        <div key={item.label} className="rounded-[20px] border border-[var(--line)] bg-white/78 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-ink)]">{item.label}</p>
-                          <p className="mt-2 text-3xl font-semibold text-[var(--page-ink)]">{item.value}</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                      <div className="rounded-[20px] border border-[rgba(15,118,110,0.15)] bg-white/72 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">Next move</p>
-                        <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">
-                          {profileQuery.data
-                            ? latestJob
-                              ? "Open the workspace to score, write, or update the current application stage."
-                              : "Open the workspace to add your first role and start tracking the search."
-                            : "Open onboarding to save the resume and context snapshot the whole workflow depends on."}
-                        </p>
-                      </div>
-                      <Link to={workspaceTarget} className={buttonClasses("accent")}>
-                        {profileQuery.data ? "Open workspace" : "Finish setup"}
-                      </Link>
-                    </div>
-                  </div>
+                  <SignedInWorkspacePreview
+                    firstName={firstName}
+                    latestJob={latestJob}
+                    metrics={metrics}
+                    profileReady={Boolean(profileQuery.data)}
+                    workspaceTarget={workspaceTarget}
+                    isLoading={jobsQuery.isPending || profileQuery.isPending}
+                    error={jobsQuery.error}
+                  />
                 </Card>
               ) : (
                 <Card className="animate-float-soft bg-[var(--panel-strong)] p-6 md:p-7">
@@ -320,6 +267,117 @@ export function LandingPage() {
             </div>
           </div>
         </footer>
+      </div>
+    </div>
+  );
+}
+
+function SignedInWorkspacePreview({
+  firstName,
+  latestJob,
+  metrics,
+  profileReady,
+  workspaceTarget,
+  isLoading,
+  error,
+}: {
+  firstName: string;
+  latestJob: JobListItemResponse | undefined;
+  metrics: ReturnType<typeof buildDashboardMetrics>;
+  profileReady: boolean;
+  workspaceTarget: "/app/dashboard" | "/app/onboarding";
+  isLoading: boolean;
+  error: unknown;
+}) {
+  const headline = profileReady ? `Welcome back, ${firstName}` : `Let’s set up your workspace, ${firstName}`;
+  const intro = profileReady
+    ? "Your search is waiting exactly where you left it."
+    : "Save your profile once so every score and letter has a real foundation.";
+  const nextMove = profileReady
+    ? latestJob
+      ? "Review the latest role, refresh the score if needed, or move the application stage forward."
+      : "Add your first role and start turning job descriptions into a useful pipeline."
+    : "Add your resume and honest context before creating jobs.";
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-[28px] border border-[rgba(15,118,110,0.16)] bg-white/82 p-5 md:p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0 space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Workspace snapshot</p>
+            <h2 className="text-2xl font-semibold leading-tight text-[var(--page-ink)]">{headline}</h2>
+            <p className="text-sm leading-6 text-[var(--muted-ink)]">{intro}</p>
+          </div>
+          <Link to={workspaceTarget} className={`${buttonClasses("accent")} shrink-0 gap-2 whitespace-nowrap`}>
+            {profileReady ? "Go to dashboard" : "Finish setup"} <ArrowRight size={16} />
+          </Link>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="rounded-[24px] border border-[var(--line)] bg-white/72 p-5">
+          <div className="flex items-center gap-3">
+            <Clock3 size={18} className="animate-spin text-[var(--accent)]" />
+            <p className="text-sm text-[var(--muted-ink)]">Checking the latest state of your workspace.</p>
+          </div>
+        </div>
+      ) : error ? (
+        <div className="rounded-[24px] border border-rose-200 bg-rose-50 p-5">
+          <p className="text-sm font-semibold text-rose-800">Workspace data could not load</p>
+          <p className="mt-2 text-sm leading-6 text-rose-700">{describeApiError(error)}</p>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label: "Roles", value: String(metrics.total) },
+              { label: "Interviews", value: String(metrics.interviewing) },
+              { label: "Waiting", value: String(metrics.waiting) },
+              { label: "Offers", value: String(metrics.offers) },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[22px] border border-[var(--line)] bg-white/78 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--muted-ink)]">{item.label}</p>
+                <p className="mt-2 text-3xl font-semibold text-[var(--page-ink)]">{item.value}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="rounded-[24px] border border-[rgba(15,118,110,0.16)] bg-white/78 p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Latest focus</p>
+            {latestJob ? (
+              <div className="mt-3 space-y-3">
+                <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-lg font-semibold leading-snug text-[var(--page-ink)]">
+                      {latestJob.role_title || "Untitled role"}
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--muted-ink)]">{latestJob.company || "Unknown company"}</p>
+                  </div>
+                  <span className="w-fit rounded-full bg-[var(--accent-soft)] px-3 py-1 text-xs font-semibold text-[var(--accent)]">
+                    {humanizeStatus(latestJob.current_status)}
+                  </span>
+                </div>
+                <p className="rounded-[18px] bg-stone-100 px-4 py-3 text-sm leading-6 text-[var(--muted-ink)]">
+                  {buildJobWorkflowSummary(latestJob)}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm leading-6 text-[var(--muted-ink)]">
+                {profileReady ? "No roles yet. Your first saved job will appear here." : "Profile setup comes first."}
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="flex flex-col gap-3 rounded-[24px] border border-[var(--line)] bg-white/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Recommended next move</p>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted-ink)]">{nextMove}</p>
+        </div>
+        <Link to={workspaceTarget} className={`${buttonClasses("secondary")} shrink-0 whitespace-nowrap`}>
+          {profileReady ? "Continue search" : "Start setup"}
+        </Link>
       </div>
     </div>
   );

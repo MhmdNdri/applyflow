@@ -35,6 +35,7 @@ frontend/dist/
 frontend/.tanstack/
 frontend/.vite/
 frontend/coverage/
+frontend/*.tsbuildinfo
 
 # Local databases and logs
 *.db
