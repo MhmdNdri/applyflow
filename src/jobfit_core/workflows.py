@@ -48,6 +48,7 @@ class JobApplicationService:
         resume_text: str,
         context_text: str,
         job_description: str,
+        applicant_profile: ApplicantProfile | None = None,
         now: datetime | None = None,
         progress: Callable[[str], None] | None = None,
     ) -> JobApplicationArtifacts:
@@ -58,7 +59,11 @@ class JobApplicationService:
             context_text=context_text,
             job_description=job_description,
         )
-        applicant_profile = extract_applicant_profile(resume_text)
+        extracted_profile = extract_applicant_profile(resume_text)
+        applicant_profile = merge_applicant_profiles(
+            primary=extracted_profile,
+            fallback=applicant_profile,
+        )
         cover_letter_date = format_cover_letter_date(
             (now or datetime.now().astimezone())
         )
@@ -79,6 +84,20 @@ class JobApplicationService:
             cover_letter_date=cover_letter_date,
             model_used=getattr(self.evaluator, "active_model", None),
         )
+
+
+def merge_applicant_profiles(
+    *,
+    primary: ApplicantProfile,
+    fallback: ApplicantProfile | None,
+) -> ApplicantProfile:
+    if fallback is None:
+        return primary
+    return ApplicantProfile(
+        full_name=primary.full_name or fallback.full_name,
+        email=primary.email or fallback.email,
+        phone=primary.phone or fallback.phone,
+    )
 
 
 def verdict_value(evaluation: JobEvaluation) -> str:

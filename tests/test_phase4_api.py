@@ -87,6 +87,30 @@ class FakeEvaluator:
         )
 
 
+class FallbackProfileEvaluator(FakeEvaluator):
+    def generate_cover_letter(
+        self,
+        resume_text: str,
+        context_text: str,
+        job_description: str,
+        evaluation: JobEvaluation,
+        applicant_profile: ApplicantProfile,
+        cover_letter_date: str,
+    ) -> str:
+        assert applicant_profile.full_name == "Profile Name"
+        assert applicant_profile.email == "person@example.com"
+        assert applicant_profile.phone is None
+        return (
+            f"{cover_letter_date}\n\n"
+            "Dear Hiring Team,\n\n"
+            "Paragraph one.\n\n"
+            "Paragraph two.\n\n"
+            "Paragraph three.\n\n"
+            "Best regards,\n"
+            "Profile Name"
+        )
+
+
 class PhaseFourApiTests(unittest.TestCase):
     def test_score_task_persists_evaluation_and_cover_letter(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -163,6 +187,56 @@ class PhaseFourApiTests(unittest.TestCase):
                 jobs_payload = client.get("/api/v1/jobs", headers=self._auth_headers()).json()
                 self.assertEqual(jobs_payload[0]["latest_evaluation"]["score"], 86)
                 self.assertEqual(jobs_payload[0]["latest_task"]["status"], "completed")
+            database.dispose()
+
+    def test_score_task_uses_profile_fallback_for_cover_letter_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = self._build_settings(root)
+            database = DatabaseManager(settings)
+            database.create_all()
+            app = create_app(
+                settings,
+                token_verifier=FakeTokenVerifier(),
+                database_manager=database,
+                evaluator_factory=lambda _root: FallbackProfileEvaluator(),
+            )
+
+            with TestClient(app) as client:
+                profile_response = client.post(
+                    "/api/v1/profile",
+                    headers=self._auth_headers(),
+                    json={
+                        "display_name": "Profile Name",
+                        "location": "London",
+                        "resume_text": "Resume with React and TypeScript experience, but no visible contact block.",
+                        "context_text": "Honest context",
+                    },
+                )
+                self.assertEqual(profile_response.status_code, 201)
+
+                job_response = client.post(
+                    "/api/v1/jobs",
+                    headers=self._auth_headers(),
+                    json={
+                        "company": "Lendable",
+                        "role_title": "Senior React Engineer",
+                        "description": "Detailed React job description.",
+                    },
+                )
+                self.assertEqual(job_response.status_code, 201)
+                job_id = job_response.json()["id"]
+
+                response = client.post(
+                    f"/api/v1/jobs/{job_id}/score",
+                    headers=self._auth_headers(),
+                )
+                self.assertEqual(response.status_code, 202)
+                task_payload = client.get(
+                    f"/api/v1/tasks/{response.json()['task_id']}",
+                    headers=self._auth_headers(),
+                ).json()
+                self.assertEqual(task_payload["status"], "completed")
             database.dispose()
 
     def test_retry_endpoint_recovers_failed_task_in_local_mode(self) -> None:

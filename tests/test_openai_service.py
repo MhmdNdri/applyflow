@@ -111,6 +111,9 @@ class OpenAIServiceTests(unittest.TestCase):
         self.assertEqual(
             cover_letter,
             (
+                "Mohammad Naderi\n"
+                "m.n.mohammad.naderi@gmail.com\n"
+                "+44 7700 900123\n\n"
                 "27 March 2026\n\n"
                 "Dear Hiring Team,\n\n"
                 "First paragraph.\n\n"

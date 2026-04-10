@@ -31,6 +31,8 @@ Rules:
 - Target roughly 150 to 210 words across the 3 body paragraphs.
 - Ground every claim in the supplied resume and honest context.
 - Tailor the letter to the role and company when known.
+- Prefer specific, credible evidence from the resume over generic enthusiasm.
+- If the fit has gaps, frame them honestly and positively without apologizing too much.
 - Do not invent achievements, numbers, tools, or domain expertise.
 - Do not include the date, greeting, sign-off, applicant name, email, phone, postal address block, placeholders, bullet points, or markdown.
 - Return only the 3 body paragraphs.
@@ -104,6 +106,9 @@ def build_cover_letter_input(
             ),
             "Final Letter Shell Added By The App:",
             (
+                f"{applicant_profile.full_name or 'Candidate'}\n"
+                f"{applicant_profile.email or ''}\n"
+                f"{applicant_profile.phone or ''}\n\n"
                 f"{cover_letter_date}\n\n"
                 "Dear Hiring Team,\n\n"
                 "[Paragraph 1]\n\n"

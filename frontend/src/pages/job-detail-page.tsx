@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form";
 import { Link, useParams } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 import { Button, Card, EmptyState, Field, LoadingState, PageHeader, ScorePill, Select, StatusPill, buttonClasses } from "@/components/ui";
 import { describeApiError } from "@/lib/api/client";
@@ -46,6 +47,7 @@ function JobDetailContent({ jobId }: { jobId: string }) {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [workflowMessage, setWorkflowMessage] = useState<string | null>(null);
   const [copiedLetter, setCopiedLetter] = useState(false);
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
   const job = jobQuery.data;
 
   const taskQuery = useTaskQuery(activeTaskId || "", {
@@ -149,12 +151,28 @@ function JobDetailContent({ jobId }: { jobId: string }) {
                 })}
               />
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-[var(--page-ink)]">Description</h2>
-              <pre className="mt-3 whitespace-pre-wrap rounded-[24px] bg-stone-100 p-5 text-sm leading-7 text-[var(--page-ink)]">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between gap-4 rounded-[24px] bg-stone-100 px-5 py-4 text-left transition hover:bg-stone-200/70"
+              onClick={() => setDescriptionOpen((open) => !open)}
+              aria-expanded={descriptionOpen}
+            >
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--page-ink)]">Job description</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--muted-ink)]">
+                  {descriptionOpen ? "Hide the full posting." : "Expand only when you need to review the source posting."}
+                </p>
+              </div>
+              <ChevronDown
+                size={22}
+                className={`shrink-0 text-[var(--accent)] transition-transform ${descriptionOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {descriptionOpen ? (
+              <pre className="max-h-[520px] overflow-auto whitespace-pre-wrap rounded-[24px] bg-stone-100 p-5 text-sm leading-7 text-[var(--page-ink)]">
                 {job.description}
               </pre>
-            </div>
+            ) : null}
           </Card>
 
           <Card className="space-y-5">
@@ -183,16 +201,7 @@ function JobDetailContent({ jobId }: { jobId: string }) {
                   </div>
                   <div className="grid gap-3">
                     <InfoCard label="Verdict" value={humanizeVerdict(job.latest_evaluation.verdict)} />
-                    <InfoCard label="Model" value={job.latest_evaluation.model} />
-                    <InfoCard
-                      label="Scored"
-                      value={formatTimestamp(job.latest_evaluation.created_at, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    />
+                    <InfoCard label="Score" value={`${job.latest_evaluation.score}/100`} />
                   </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2">

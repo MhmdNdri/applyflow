@@ -14,6 +14,7 @@ from fastapi import FastAPI
 
 from jobfit_cli.config import AppConfig, ConfigurationError
 from jobfit_core import (
+    ApplicantProfile,
     JobApplicationService,
     OpenAIEvaluator,
     extract_applicant_profile,
@@ -27,6 +28,8 @@ from .models import (
     CoverLetter,
     Evaluation,
     EvaluationVerdict,
+    Profile,
+    User,
 )
 from .queue import dispatch_task, schedule_task_retry
 from .settings import ApiSettings
@@ -171,12 +174,19 @@ def run_task(api_settings: ApiSettings, evaluator_factory: EvaluatorFactory, tas
                 job_description = job_state.job.description
                 resume_text = resume_version.content
                 context_text = context_version.content
+                applicant_profile = build_applicant_profile(
+                    session,
+                    user_id=task.user_id,
+                    profile_id=job_state.job.profile_id,
+                    resume_text=resume_text,
+                )
 
             workflow = JobApplicationService(evaluator)
             artifacts = workflow.score_job(
                 resume_text=resume_text,
                 context_text=context_text,
                 job_description=job_description,
+                applicant_profile=applicant_profile,
             )
 
             with database.session() as session:
@@ -255,7 +265,12 @@ def run_task(api_settings: ApiSettings, evaluator_factory: EvaluatorFactory, tas
                 if resume_version is None or context_version is None:
                     raise NotFoundError("Evaluation profile snapshot is incomplete.")
 
-                applicant_profile = extract_applicant_profile(resume_version.content)
+                applicant_profile = build_applicant_profile(
+                    session,
+                    user_id=task.user_id,
+                    profile_id=resume_version.profile_id,
+                    resume_text=resume_version.content,
+                )
                 cover_letter_date = format_cover_letter_date(datetime.now().astimezone())
                 cover_letter_text = evaluator.generate_cover_letter(
                     resume_text=resume_version.content,
@@ -367,6 +382,23 @@ def compute_profile_hash(resume_text: str, context_text: str) -> str:
     digest.update(b"\n---\n")
     digest.update(context_text.encode("utf-8"))
     return digest.hexdigest()
+
+
+def build_applicant_profile(
+    session,
+    *,
+    user_id: str,
+    profile_id: str | None,
+    resume_text: str,
+) -> ApplicantProfile:
+    parsed = extract_applicant_profile(resume_text)
+    profile = session.get(Profile, profile_id) if profile_id else None
+    user = session.get(User, user_id)
+    return ApplicantProfile(
+        full_name=parsed.full_name or (profile.display_name if profile is not None else None),
+        email=parsed.email or (user.email if user is not None else None),
+        phone=parsed.phone,
+    )
 
 
 def calculate_retry_delay_ms(attempt_count: int) -> int:

@@ -345,7 +345,11 @@ def normalize_cover_letter(
     )
 
     signer_name = applicant_profile.full_name or "Candidate"
-    return "\n\n".join(
+    contact_header = build_cover_letter_contact_header(applicant_profile)
+    letter_parts = []
+    if contact_header:
+        letter_parts.append(contact_header)
+    letter_parts.extend(
         [
             cover_letter_date,
             "Dear Hiring Team,",
@@ -353,6 +357,19 @@ def normalize_cover_letter(
             f"Best regards,\n{signer_name}",
         ]
     )
+    return "\n\n".join(letter_parts)
+
+
+def build_cover_letter_contact_header(applicant_profile: ApplicantProfile) -> str | None:
+    lines = [
+        applicant_profile.full_name,
+        applicant_profile.email,
+        applicant_profile.phone,
+    ]
+    cleaned = [line.strip() for line in lines if line and line.strip()]
+    if not cleaned:
+        return None
+    return "\n".join(cleaned)
 
 
 def trim_cover_letter_body_paragraphs(

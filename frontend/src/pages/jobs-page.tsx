@@ -8,7 +8,7 @@ import {
   useReactTable,
   type SortingState,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowUpDown, BriefcaseBusiness, ChevronDown, ChevronUp, PlusCircle } from "lucide-react";
 import { startTransition, useDeferredValue, useState } from "react";
 
 import { Button, Card, EmptyState, Field, LoadingState, PageHeader, ScorePill, Select, StatusPill, TextArea, TextInput } from "@/components/ui";
@@ -163,14 +163,106 @@ export function JobsPage() {
         description="Use this built-in table like your private spreadsheet: roles, status, score, and saved letters all stay in one database-backed view."
       />
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <Card className="space-y-5 border-[rgba(15,118,110,0.18)] bg-[linear-gradient(160deg,rgba(243,252,249,0.96)_0%,rgba(255,249,236,0.98)_100%)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-[var(--accent)] p-3 text-white shadow-[0_14px_30px_rgba(15,118,110,0.2)]">
+              <PlusCircle size={22} />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-[var(--page-ink)]">Add a job</h2>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--muted-ink)]">
+                Paste a role once. Applyflow will turn it into a tracked record, then the detail page can score it and generate the letter.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-[20px] bg-white/75 px-4 py-3 text-sm leading-6 text-[var(--muted-ink)]">
+            <span className="font-semibold text-[var(--page-ink)]">Tip:</span> full descriptions are saved, but hidden on the detail page until you expand them.
+          </div>
+        </div>
+
+        <form
+          className="grid gap-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            void form.handleSubmit();
+          }}
+        >
+          <div className="grid gap-4 lg:grid-cols-2">
+            <form.Field name="company">
+              {(field) => (
+                <Field label="Company">
+                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="role_title">
+              {(field) => (
+                <Field label="Role title">
+                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
+                </Field>
+              )}
+            </form.Field>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <form.Field name="location">
+              {(field) => (
+                <Field label="Location">
+                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="current_status">
+              {(field) => (
+                <Field label="Initial status">
+                  <Select value={field.state.value} onChange={(event) => field.handleChange(event.target.value as typeof field.state.value)}>
+                    {APPLICATION_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {humanizeStatus(status)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="source_url">
+              {(field) => (
+                <Field label="Source URL">
+                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} placeholder="https://..." />
+                </Field>
+              )}
+            </form.Field>
+          </div>
+          <form.Field name="description">
+            {(field) => (
+              <Field label="Job description" hint="Paste the full posting. It will stay attached to this role for scoring and future review.">
+                <TextArea value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} className="min-h-48" />
+              </Field>
+            )}
+          </form.Field>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button type="submit" disabled={createJob.isPending}>
+              {createJob.isPending ? "Creating…" : "Create job"}
+            </Button>
+            {createJob.error ? <p className="text-sm text-rose-700">{describeApiError(createJob.error)}</p> : null}
+          </div>
+        </form>
+      </Card>
+
+      <div className="grid gap-5">
         <Card className="min-w-0 space-y-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-[var(--page-ink)]">Role table</h2>
-              <p className="mt-1 text-sm leading-6 text-[var(--muted-ink)]">
-                Filter by text or stage, then jump straight into the role. Click a column header to sort.
-              </p>
+            <div className="flex items-start gap-4">
+              <div className="rounded-2xl bg-[var(--accent-soft)] p-3 text-[var(--accent)]">
+                <BriefcaseBusiness size={22} />
+              </div>
+              <div>
+                <h2 className="text-xl font-semibold text-[var(--page-ink)]">Role table</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--muted-ink)]">
+                  Filter by text or stage, then jump straight into the role. Click a column header to sort.
+                </p>
+              </div>
             </div>
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
               <TextInput value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search company or role" className="sm:w-52" />
@@ -186,7 +278,7 @@ export function JobsPage() {
           </div>
 
           {rows.length === 0 ? (
-            <EmptyState title="No roles match your filters" description="Adjust the search or create a fresh role in the form beside this table." />
+            <EmptyState title="No roles match your filters" description="Adjust the search or create a fresh role in the section above this table." />
           ) : (
             <>
               <div className="w-full overflow-x-auto rounded-[20px] border border-[var(--line)]">
@@ -252,81 +344,6 @@ export function JobsPage() {
               </p>
             </>
           )}
-        </Card>
-
-        <Card className="space-y-5">
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--page-ink)]">Add a job</h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--muted-ink)]">
-              Create the role record here, then use the detail page to run scoring, regenerate the letter, and keep the latest state in one place.
-            </p>
-          </div>
-
-          <form
-            className="space-y-4"
-            onSubmit={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              void form.handleSubmit();
-            }}
-          >
-            <form.Field name="company">
-              {(field) => (
-                <Field label="Company">
-                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
-                </Field>
-              )}
-            </form.Field>
-            <form.Field name="role_title">
-              {(field) => (
-                <Field label="Role title">
-                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
-                </Field>
-              )}
-            </form.Field>
-            <div className="grid gap-4 md:grid-cols-2">
-              <form.Field name="location">
-                {(field) => (
-                  <Field label="Location">
-                    <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="current_status">
-                {(field) => (
-                  <Field label="Initial status">
-                    <Select value={field.state.value} onChange={(event) => field.handleChange(event.target.value as typeof field.state.value)}>
-                      {APPLICATION_STATUS_OPTIONS.map((status) => (
-                        <option key={status} value={status}>
-                          {humanizeStatus(status)}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                )}
-              </form.Field>
-            </div>
-            <form.Field name="source_url">
-              {(field) => (
-                <Field label="Source URL">
-                  <TextInput value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} placeholder="https://..." />
-                </Field>
-              )}
-            </form.Field>
-            <form.Field name="description">
-              {(field) => (
-                <Field label="Job description" hint="Paste the real role text here. Once saved, the detail page can score it and generate the latest letter.">
-                  <TextArea value={field.state.value} onChange={(event) => field.handleChange(event.target.value)} />
-                </Field>
-              )}
-            </form.Field>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button type="submit" disabled={createJob.isPending}>
-                {createJob.isPending ? "Creating…" : "Create job"}
-              </Button>
-              {createJob.error ? <p className="text-sm text-rose-700">{describeApiError(createJob.error)}</p> : null}
-            </div>
-          </form>
         </Card>
       </div>
     </div>
