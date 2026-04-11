@@ -35,37 +35,49 @@ export function LandingPage() {
   return (
     <div className="page-shell px-4 py-5 md:px-6 md:py-6">
       <div className="mx-auto flex max-w-[1480px] flex-col gap-5">
-        <header className="glass-panel animate-rise flex flex-col gap-4 rounded-[30px] border border-[var(--line)] px-6 py-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <Logo size={36} />
-            <div>
-              <p className="hero-title text-2xl text-[var(--page-ink)]">Applyflow</p>
-              <p className="text-sm text-[var(--muted-ink)]">One place to evaluate roles, write better letters, and track the search.</p>
+        <header className="glass-panel animate-rise rounded-[30px] border border-[var(--line)] px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-start gap-3">
+              <Logo size={36} />
+              <div className="min-w-0">
+                <p className="hero-title text-2xl text-[var(--page-ink)]">Applyflow</p>
+                <p className="text-sm leading-6 text-[var(--muted-ink)]">
+                  One place to evaluate roles, write better letters, and track the search.
+                </p>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <a href="#features" className={buttonClasses("ghost")}>
-              Features
-            </a>
-            <a href="#workflow" className={buttonClasses("ghost")}>
-              Workflow
-            </a>
-            {isLoaded && isSignedIn ? (
-              <Link to={workspaceTarget} className={buttonClasses("accent")}>
-                {workspaceCta} <ArrowRight size={16} />
-              </Link>
-            ) : (
-              <>
-                <SignInButton mode="modal">
-                  <Button type="button" variant="secondary">
-                    Sign in
-                  </Button>
-                </SignInButton>
-                <SignUpButton mode="modal">
-                  <Button type="button">Get started</Button>
-                </SignUpButton>
-              </>
-            )}
+
+            <div className="flex flex-col gap-3 lg:items-end">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+                <a href="#features" className={`${buttonClasses("ghost")} justify-center bg-white/45 px-3`}>
+                  Features
+                </a>
+                <a href="#workflow" className={`${buttonClasses("ghost")} justify-center bg-white/45 px-3`}>
+                  Workflow
+                </a>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+                {isLoaded && isSignedIn ? (
+                  <Link to={workspaceTarget} className={`${buttonClasses("accent")} w-full justify-center sm:w-auto`}>
+                    {workspaceCta} <ArrowRight size={16} />
+                  </Link>
+                ) : (
+                  <>
+                    <SignInButton mode="modal">
+                      <Button type="button" variant="secondary" className="w-full justify-center sm:w-auto">
+                        Sign in
+                      </Button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <Button type="button" className="w-full justify-center sm:w-auto">
+                        Get started
+                      </Button>
+                    </SignUpButton>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </header>
 

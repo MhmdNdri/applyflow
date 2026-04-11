@@ -7,14 +7,15 @@ import type { ApplicationStatus } from "@/lib/api/types";
 
 export function buttonClasses(variant: "primary" | "secondary" | "ghost" | "accent" = "primary") {
   return clsx(
-    "inline-flex cursor-pointer items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition duration-150",
+    "inline-flex cursor-pointer items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--accent-soft)]",
     variant === "primary" &&
       "bg-[var(--page-ink)] text-white shadow-[0_12px_24px_rgba(27,35,52,0.14)] hover:-translate-y-0.5",
     variant === "accent" &&
       "bg-[var(--accent)] text-white shadow-[0_14px_28px_rgba(15,118,110,0.22)] hover:-translate-y-0.5",
     variant === "secondary" &&
-      "border border-[var(--line)] bg-white/80 text-[var(--page-ink)] hover:border-[var(--accent)] hover:text-[var(--accent)]",
-    variant === "ghost" && "text-[var(--muted-ink)] hover:text-[var(--page-ink)]",
+      "border border-[rgba(27,35,52,0.1)] bg-stone-100/88 text-[rgba(15,118,110,0.96)] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)] hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.28)] hover:bg-white hover:text-[var(--accent)]",
+    variant === "ghost" &&
+      "text-[rgba(74,84,106,0.95)] hover:bg-white/70 hover:text-[var(--page-ink)]",
   );
 }
 

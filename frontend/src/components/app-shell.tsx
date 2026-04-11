@@ -86,10 +86,10 @@ export function AppShell({
   const email = authQuery.data?.email || user?.primaryEmailAddress?.emailAddress || "Signed in";
 
   return (
-    <div className="page-shell px-4 py-5 md:px-6 md:py-6">
-      <div className="mx-auto grid max-w-[1480px] gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
-        <aside className="glass-panel grain-overlay relative min-w-0 rounded-[32px] border border-[var(--line)] p-6">
-          <div className="min-w-0 space-y-8">
+    <div className="page-shell px-3 py-4 sm:px-4 sm:py-5 md:px-6 md:py-6">
+      <div className="mx-auto grid max-w-[1480px] gap-4 lg:grid-cols-[280px_minmax(0,1fr)] lg:gap-5">
+        <aside className="glass-panel grain-overlay relative min-w-0 rounded-[32px] border border-[var(--line)] p-5 sm:p-6">
+          <div className="min-w-0 space-y-6 sm:space-y-8">
             <div className="space-y-3">
               <div className="flex items-center gap-2.5">
                 <Logo size={32} />
@@ -109,7 +109,7 @@ export function AppShell({
               <p className="break-all text-sm leading-6 text-[var(--muted-ink)]">{email}</p>
             </Card>
 
-            <nav className="space-y-2">
+            <nav className="-mx-1 flex gap-2 overflow-x-auto pb-1 lg:mx-0 lg:block lg:space-y-2 lg:overflow-visible lg:pb-0">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const active = pathname.startsWith(item.to);
@@ -119,8 +119,8 @@ export function AppShell({
                     to={item.to}
                     className={
                       active
-                        ? "flex items-center gap-3 rounded-2xl border border-[rgba(15,118,110,0.18)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--page-ink)] shadow-[0_10px_20px_rgba(15,118,110,0.08)]"
-                        : "flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-[var(--muted-ink)] transition hover:bg-white/70 hover:text-[var(--page-ink)]"
+                        ? "flex shrink-0 items-center gap-3 rounded-2xl border border-[rgba(15,118,110,0.18)] bg-[var(--accent-soft)] px-4 py-3 text-sm font-semibold text-[var(--page-ink)] shadow-[0_10px_20px_rgba(15,118,110,0.08)]"
+                        : "flex shrink-0 items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-[var(--muted-ink)] transition hover:bg-white/70 hover:text-[var(--page-ink)]"
                     }
                   >
                     <Icon size={18} />
@@ -158,18 +158,18 @@ export function AppShell({
           </div>
         </aside>
 
-        <main className="glass-panel rounded-[32px] border border-[var(--line)] p-6 md:p-8">
+        <main className="glass-panel rounded-[32px] border border-[var(--line)] p-5 sm:p-6 md:p-8">
           <header className="mb-8 flex flex-col gap-5 border-b border-[var(--line)] pb-6 lg:flex-row lg:items-start lg:justify-between">
             <div className="max-w-3xl space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[var(--accent)]">Workspace</p>
               <h2 className="hero-title text-4xl text-[var(--page-ink)]">{title}</h2>
               <p className="text-base leading-7 text-[var(--muted-ink)]">{description}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Link to="/app/jobs" className={buttonClasses("secondary")}>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:self-start">
+              <Link to="/app/jobs" className={`${buttonClasses("secondary")} w-full justify-center sm:w-auto`}>
                 Open pipeline
               </Link>
-              <div className="rounded-full border border-[var(--line)] bg-white/80 p-1">
+              <div className="flex items-center justify-center rounded-full border border-[var(--line)] bg-white/80 p-1 sm:justify-start">
                 <UserButton />
               </div>
             </div>
