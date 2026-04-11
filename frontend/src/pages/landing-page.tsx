@@ -47,8 +47,8 @@ export function LandingPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 lg:items-end">
-              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <div className="flex flex-col gap-3 lg:ml-6 lg:flex-row lg:items-center lg:justify-end lg:gap-2 xl:gap-3">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end lg:flex-nowrap">
                 <a href="#features" className={`${buttonClasses("ghost")} justify-center bg-white/45 px-3`}>
                   Features
                 </a>
@@ -57,7 +57,7 @@ export function LandingPage() {
                 </a>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end lg:flex-nowrap lg:items-center">
                 {isLoaded && isSignedIn ? (
                   <Link to={workspaceTarget} className={`${buttonClasses("accent")} w-full justify-center sm:w-auto`}>
                     {workspaceCta} <ArrowRight size={16} />
