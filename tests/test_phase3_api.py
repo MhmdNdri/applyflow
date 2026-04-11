@@ -221,6 +221,50 @@ class PhaseThreeApiTests(unittest.TestCase):
                     self.assertEqual(version.source_file_bytes, b"Resume from file")
             database.dispose()
 
+    def test_profile_accepts_manual_resume_text_when_upload_is_not_extractable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            settings = self._build_settings(root)
+            database = DatabaseManager(settings)
+            database.create_all()
+            app = create_app(settings, token_verifier=FakeTokenVerifier(), database_manager=database)
+
+            unreadable_pdf = (
+                b"%PDF-1.4\n"
+                b"1 0 obj\n<< /Length 4 >>\nstream\n"
+                b"\x00\x01\x02\x03\n"
+                b"endstream\nendobj\n%%EOF"
+            )
+
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/profile",
+                    headers=self._auth_headers(),
+                    json={
+                        "display_name": "Mohammad Naderi",
+                        "location": "London",
+                        "resume_text": "Manual resume fallback",
+                        "context_text": "Stable context",
+                        "resume_upload": {
+                            "file_name": "resume.pdf",
+                            "content_type": "application/pdf",
+                            "content_base64": base64.b64encode(unreadable_pdf).decode("ascii"),
+                        },
+                    },
+                )
+                self.assertEqual(response.status_code, 201)
+                payload = response.json()
+                self.assertEqual(payload["resume_text"], "Manual resume fallback")
+                self.assertEqual(payload["resume_source_file"]["file_name"], "resume.pdf")
+
+                with database.session() as session:
+                    version = session.scalar(select(ResumeVersion).where(ResumeVersion.profile_id == payload["id"]))
+                    self.assertIsNotNone(version)
+                    self.assertEqual(version.content, "Manual resume fallback")
+                    self.assertEqual(version.source_file_name, "resume.pdf")
+                    self.assertEqual(version.source_file_bytes, unreadable_pdf)
+            database.dispose()
+
     def _build_settings(self, root: Path) -> ApiSettings:
         return ApiSettings(
             root=root,

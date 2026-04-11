@@ -4,6 +4,7 @@ import { startTransition, useState } from "react";
 
 import { ProfileDocumentField } from "@/components/profile-document-field";
 import { Card, Field, TextInput, PageHeader, Button } from "@/components/ui";
+import { describeApiError } from "@/lib/api/client";
 import { useCreateProfileMutation } from "@/lib/api/hooks";
 import { fileToUploadPayload, type UploadedProfileDocumentPayload } from "@/lib/uploads";
 
@@ -134,7 +135,7 @@ export function OnboardingPage() {
             <Button type="submit" disabled={mutation.isPending}>
               {mutation.isPending ? "Saving profile…" : "Create profile"}
             </Button>
-            {mutation.error ? <p className="text-sm text-rose-700">{String(mutation.error.message)}</p> : null}
+            {mutation.error ? <p className="text-sm text-rose-700">{describeApiError(mutation.error)}</p> : null}
             {uploadError ? <p className="text-sm text-rose-700">{uploadError}</p> : null}
           </div>
         </form>

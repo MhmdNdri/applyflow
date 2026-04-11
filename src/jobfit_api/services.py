@@ -550,11 +550,14 @@ def prepare_profile_document(
 ) -> PreparedProfileDocument:
     normalized_text = normalize_optional_text(text)
     extracted: ExtractedDocument | None = None
+    upload_error: ValueError | None = None
     if upload is not None:
         try:
             extracted = extract_uploaded_document(upload, field_name=field_name)
         except ValueError as exc:
-            raise ValidationError(str(exc)) from exc
+            upload_error = exc
+            if normalized_text is None:
+                raise ValidationError(str(exc)) from exc
 
     if normalized_text is None and extracted is None and existing is None:
         raise ValidationError(f"{field_name} must not be empty.")
@@ -573,6 +576,15 @@ def prepare_profile_document(
             file_mime_type=extracted.content_type,
             file_size_bytes=extracted.size_bytes,
             file_bytes=extracted.raw_bytes,
+        )
+
+    if upload is not None and upload_error is not None and normalized_text is not None:
+        return PreparedProfileDocument(
+            text=resolved_text.strip(),
+            file_name=upload.file_name.strip(),
+            file_mime_type=upload.content_type.strip() if upload.content_type else None,
+            file_size_bytes=upload.size_bytes,
+            file_bytes=upload.data,
         )
 
     if existing is not None:

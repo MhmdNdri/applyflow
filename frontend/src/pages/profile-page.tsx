@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { ProfileDocumentField } from "@/components/profile-document-field";
 import { Button, Card, EmptyState, Field, LoadingState, PageHeader, TextInput } from "@/components/ui";
+import { describeApiError } from "@/lib/api/client";
 import { useProfileQuery, useUpdateProfileMutation } from "@/lib/api/hooks";
 import { fileToUploadPayload, type UploadedProfileDocumentPayload } from "@/lib/uploads";
 
@@ -150,7 +151,7 @@ function ProfileEditor() {
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? "Saving changes…" : "Save profile"}
               </Button>
-              {mutation.error ? <p className="text-sm text-rose-700">{String(mutation.error.message)}</p> : null}
+              {mutation.error ? <p className="text-sm text-rose-700">{describeApiError(mutation.error)}</p> : null}
               {uploadError ? <p className="text-sm text-rose-700">{uploadError}</p> : null}
               {mutation.isSuccess ? <p className="text-sm text-emerald-700">Profile updated successfully.</p> : null}
             </div>

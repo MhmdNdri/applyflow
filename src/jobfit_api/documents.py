@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 from dataclasses import dataclass
 import io
 import re
@@ -69,7 +71,10 @@ def extract_uploaded_document(upload: UploadedDocumentInput, *, field_name: str)
 
     normalized_text = text.strip()
     if not normalized_text:
-        raise ValueError(f"{field_name} upload did not contain readable text.")
+        raise ValueError(
+            f"{field_name} upload did not contain readable text. "
+            "If this file is a scanned or image-only PDF, paste the text manually or export it as a searchable PDF/DOCX."
+        )
 
     return ExtractedDocument(
         text=normalized_text,
@@ -137,12 +142,54 @@ def iter_pdf_streams(data: bytes) -> Iterable[tuple[bytes, bytes]]:
 
 def decode_pdf_stream(stream_match: tuple[bytes, bytes]) -> bytes:
     header, payload = stream_match
-    if b"/FlateDecode" in header:
+    decoded = payload
+    filters = extract_pdf_filter_names(header)
+    if not filters:
+        return decoded
+
+    for filter_name in filters:
         try:
-            return zlib.decompress(payload)
-        except zlib.error:
+            if filter_name in {"FlateDecode", "Fl"}:
+                decoded = zlib.decompress(decoded)
+            elif filter_name in {"ASCIIHexDecode", "AHx"}:
+                decoded = decode_ascii_hex(decoded)
+            elif filter_name in {"ASCII85Decode", "A85"}:
+                decoded = decode_ascii85(decoded)
+            else:
+                return b""
+        except (ValueError, zlib.error, binascii.Error):
             return b""
-    return payload
+    return decoded
+
+
+def extract_pdf_filter_names(header: bytes) -> list[str]:
+    match = re.search(rb"/Filter\s*(\[(.*?)\]|/[^/\s<>\[\]()]+)", header, re.S)
+    if not match:
+        return []
+
+    raw_value = match.group(1)
+    return [
+        name.decode("latin-1")
+        for name in re.findall(rb"/([A-Za-z0-9]+)", raw_value)
+    ]
+
+
+def decode_ascii_hex(data: bytes) -> bytes:
+    cleaned = re.sub(rb"\s+", b"", data).rstrip(b">")
+    if len(cleaned) % 2 == 1:
+        cleaned += b"0"
+    if not cleaned:
+        return b""
+    return bytes.fromhex(cleaned.decode("ascii"))
+
+
+def decode_ascii85(data: bytes) -> bytes:
+    cleaned = re.sub(rb"\s+", b"", data)
+    if not cleaned:
+        return b""
+    if cleaned.startswith(b"<~") and cleaned.endswith(b"~>"):
+        return base64.a85decode(cleaned, adobe=True)
+    return base64.a85decode(cleaned, adobe=False)
 
 
 def extract_pdf_stream_text(data: bytes) -> str:
@@ -159,20 +206,38 @@ def extract_pdf_stream_text(data: bytes) -> str:
 
 def parse_pdf_text_operators(text: str) -> list[str]:
     matches: list[str] = []
-    literal_tj = re.findall(r"\((?:\\.|[^\\()])*\)\s*Tj", text)
-    for match in literal_tj:
-        matches.append(parse_pdf_literal(match[: match.rfind(")") + 1]))
+    literal_or_hex_tj = re.findall(r"(\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>)\s*Tj", text)
+    for match in literal_or_hex_tj:
+        parsed = parse_pdf_text_token(match)
+        if parsed:
+            matches.append(parsed)
 
     for block in re.findall(r"\[(.*?)\]\s*TJ", text, re.S):
-        pieces = re.findall(r"\((?:\\.|[^\\()])*\)", block)
+        pieces = re.findall(r"\((?:\\.|[^\\()])*\)|<[0-9A-Fa-f\s]+>", block)
         if not pieces:
             continue
-        matches.append("".join(parse_pdf_literal(piece) for piece in pieces))
+        parsed_pieces = [parse_pdf_text_token(piece) for piece in pieces]
+        joined = "".join(piece for piece in parsed_pieces if piece)
+        if joined:
+            matches.append(joined)
     return matches
 
 
 def parse_pdf_literal_strings(text: str) -> list[str]:
-    return [parse_pdf_literal(match) for match in re.findall(r"\((?:\\.|[^\\()])*\)", text)]
+    matches = [parse_pdf_literal(match) for match in re.findall(r"\((?:\\.|[^\\()])*\)", text)]
+    matches.extend(
+        parse_pdf_hex_literal(match)
+        for match in re.findall(r"<[0-9A-Fa-f\s]+>", text)
+    )
+    return matches
+
+
+def parse_pdf_text_token(token: str) -> str:
+    if token.startswith("("):
+        return parse_pdf_literal(token)
+    if token.startswith("<"):
+        return parse_pdf_hex_literal(token)
+    return ""
 
 
 def parse_pdf_literal(literal: str) -> str:
@@ -184,6 +249,40 @@ def parse_pdf_literal(literal: str) -> str:
         return chr(int(match.group(1), 8))
 
     return re.sub(r"\\([0-7]{1,3})", replace_octal, body)
+
+
+def parse_pdf_hex_literal(literal: str) -> str:
+    body = re.sub(r"\s+", "", literal[1:-1])
+    if not body:
+        return ""
+    if len(body) % 2 == 1:
+        body += "0"
+    try:
+        data = bytes.fromhex(body)
+    except ValueError:
+        return ""
+    return decode_pdf_text_bytes(data)
+
+
+def decode_pdf_text_bytes(data: bytes) -> str:
+    if not data:
+        return ""
+    if data.startswith((b"\xfe\xff", b"\xff\xfe")):
+        try:
+            return data.decode("utf-16")
+        except UnicodeDecodeError:
+            pass
+    if b"\x00" in data and len(data) % 2 == 0:
+        try:
+            return data.decode("utf-16-be")
+        except UnicodeDecodeError:
+            pass
+    for encoding in ("utf-8", "cp1252", "latin-1"):
+        try:
+            return data.decode(encoding)
+        except UnicodeDecodeError:
+            continue
+    return data.decode("latin-1", errors="ignore")
 
 
 def cleanup_pdf_text(value: str) -> str:

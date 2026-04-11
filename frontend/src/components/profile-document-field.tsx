@@ -39,7 +39,7 @@ export function ProfileDocumentField({
           <div className="space-y-1">
             <p className="text-sm font-semibold text-[var(--page-ink)]">Upload PDF, DOCX, TXT, or Markdown</p>
             <p className="text-xs leading-6 text-[var(--muted-ink)]">
-              The backend stores the file metadata in the database and extracts readable text for future evaluations.
+              The backend stores the file metadata in the database and extracts readable text for future evaluations. Searchable PDFs work best; scanned image-only PDFs may still need pasted text.
             </p>
           </div>
           <input
@@ -56,7 +56,7 @@ export function ProfileDocumentField({
               <span className="font-semibold">Ready to upload:</span>
               <span>{pendingFileName}</span>
               {pendingFileSize !== null ? <span className="text-[var(--muted-ink)]">{formatBytes(pendingFileSize)}</span> : null}
-              <Button type="button" variant="ghost" className="px-0 py-0 text-[var(--accent)]" onClick={onClearSelectedFile}>
+              <Button type="button" variant="ghost" className="px-3 py-1 text-[var(--accent)]" onClick={onClearSelectedFile}>
                 Clear
               </Button>
             </div>
